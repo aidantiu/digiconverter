@@ -6,3 +6,10 @@ node_modules
 
 # Playground files
 playground-1.mongodb.js
+
+# Ignore npm debug log files
+npm-debug.log
+
+# Ignore Docker-related files
+docker-compose.yml
+Dockerfile

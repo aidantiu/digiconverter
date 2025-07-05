@@ -1,3 +1,7 @@
 node_modules
 npm-debug.log
 .env
+
+# Ignore Docker-related files
+docker-compose.yml
+Dockerfile
