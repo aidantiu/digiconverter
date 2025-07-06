@@ -375,80 +375,85 @@ const FileUpload = () => {
 
             {/* File Upload */}
             <div className="space-y-6">
-                {/* File Selection and Preview Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* File Input Section */}
-                    <div>
-                        <label htmlFor="file" className="block text-lg font-semibold text-gray-900 mb-4">
-                            📁 Select File to Convert
-                        </label>
-                        <input
-                            type="file"
-                            id="file"
-                            onChange={handleFileChange}
-                            accept="image/*,video/*"
-                            disabled={isUploading}
-                            className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                        />
+                {/* File Input Section */}
+                <div>
+                    {!file && (
+                        <>
+                            <label htmlFor="file" className="block text-lg font-semibold text-gray-900 mb-4">
+                                📁 Select File to Convert
+                            </label>
+                            <input
+                                type="file"
+                                id="file"
+                                onChange={handleFileChange}
+                                accept="image/*,video/*"
+                                disabled={isUploading}
+                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                            />
+                        </>
+                    )}
+                    
+                    {/* Hidden file input for changing files */}
+                    <input
+                        type="file"
+                        id="hidden-file"
+                        onChange={handleFileChange}
+                        accept="image/*,video/*"
+                        disabled={isUploading}
+                        className="hidden"
+                    />
                         
                         {file && (
-                            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="flex items-center space-x-3">
-                                    <div className="text-2xl">
-                                        {file.type.startsWith('image/') ? '🖼️' : '🎥'}
-                                    </div>
-                                    <div className="flex-1">
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 relative">
+                                {/* Change File Button - Overlay */}
+                                <button
+                                    onClick={() => {
+                                        document.getElementById('hidden-file').click();
+                                    }}
+                                    disabled={isUploading}
+                                    className="absolute top-2 right-2 z-10 px-2 py-1 text-xs bg-white hover:bg-gray-50 text-gray-600 rounded-md transition-colors disabled:opacity-50 shadow-sm border border-gray-200"
+                                >
+                                    Change
+                                </button>
+                                
+                                <div className="flex items-start space-x-3">
+                                    <div className="flex-1 min-w-0">
                                         <p className="font-medium text-gray-900 truncate">{file.name}</p>
-                                        <p className="text-sm text-gray-600">
+                                        <p className="text-sm text-gray-600 mb-3">
                                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                                         </p>
+                                        
+                                        {/* Thumbnail inside file info */}
+                                        {filePreview ? (
+                                            <div className="w-auto h-auto rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative bg-white">
+                                                <img
+                                                    src={filePreview}
+                                                    alt="File thumbnail"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                {/* Video overlay indicator */}
+                                                {previewType === 'video' && (
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                                                        <span className="text-white text-sm">▶️</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : file && previewType === 'video' ? (
+                                            <div className="w-24 h-24 rounded-lg border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
+                                                <DotsLoader message="" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                                                <span className="text-gray-400 text-xs text-center">No<br/>Preview</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
-                    </div>
-
-                    {/* File Preview Section */}
-                    <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center min-h-[200px]">
-                        {filePreview ? (
-                            <div className="text-center p-4">
-                                {/* Thumbnail Preview */}
-                                <div className="mx-auto mb-3 w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative">
-                                    <img
-                                        src={filePreview}
-                                        alt="File thumbnail"
-                                        className="w-full h-full object-cover"
-                                    />
-                                    {/* Video overlay indicator */}
-                                    {previewType === 'video' && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
-                                            <span className="text-white text-lg">▶️</span>
-                                        </div>
-                                    )}
-                                </div>
-                                {/* File Info */}
-                                <p className="text-sm font-medium text-gray-700 truncate">{file?.name}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {file && (file.size / (1024 * 1024)).toFixed(2)} MB • {previewType === 'video' ? 'video thumbnail' : previewType || 'file'}
-                                </p>
-                            </div>
-                        ) : file && previewType === 'video' ? (
-                            <div className="text-center p-4">
-                                {/* Loading state for video thumbnail generation */}
-                                <DotsLoader message="Generating thumbnail..." />
-                            </div>
-                        ) : (
-                            <div className="text-center p-8">
-                                <div className="text-4xl mb-2">📄</div>
-                                <p className="text-gray-600">File thumbnail will appear here</p>
-                                <p className="text-sm text-gray-500 mt-1">Select a file to see thumbnail</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
                 
                 {file && (
-                    <div className="space-y-2">
+                    <div className="space-y-4 mt-4">
                         <label className="block text-lg font-semibold text-gray-700">🔄 Convert to:</label>
                         <select
                             value={targetFormat}
@@ -470,7 +475,7 @@ const FileUpload = () => {
                 <button
                     onClick={handleUpload}
                     disabled={!file || !targetFormat || isUploading || (uploadLimits && !uploadLimits.canUpload && !uploadLimits.unlimited)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg flex items-center justify-center"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg flex items-center justify-center mt-6 text-center"
                 >
                     {isUploading ? (
                         <div className="flex items-center">
@@ -481,6 +486,7 @@ const FileUpload = () => {
                         '🚀 Convert File'
                     )}
                 </button>
+                </div>
             </div>
 
             {/* Conversion Status */}
