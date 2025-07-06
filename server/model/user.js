@@ -17,13 +17,8 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
+        required: true
     },
-    // TO BE IMPLEMENTED
-    googleId: {
-        type: String,
-        unique: true,
-        sparse: true // Allows for unique constraint to be applied only when googleId is present
-    }, 
     createdAt: {
         type: Date,
         default: Date.now
