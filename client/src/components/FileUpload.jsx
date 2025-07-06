@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import Loader, { DotsLoader } from './Loader';
+import ProgressBar, { CircularProgress } from './ProgressBar';
 
 // Debug function - add to window for manual cleanup
 if (typeof window !== 'undefined') {
@@ -22,6 +24,8 @@ const FileUpload = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [filePreview, setFilePreview] = useState(null);
     const [previewType, setPreviewType] = useState(null);
+    const [conversionProgress, setConversionProgress] = useState(0);
+    const [isConverting, setIsConverting] = useState(false);
 
     // Check upload limits on component mount
     useEffect(() => {
@@ -222,6 +226,8 @@ const FileUpload = () => {
                 checkUploadLimits();
                 // Poll for status updates
                 pollConversionStatus(data.conversionId);
+                setIsConverting(true);
+                setConversionProgress(0);
             } else {
                 alert(data.message || 'Upload failed');
             }
@@ -254,8 +260,19 @@ const FileUpload = () => {
                 const data = await response.json();
                 setConversionStatus(data);
                 
+                // Update progress
+                if (data.progress !== undefined) {
+                    setConversionProgress(data.progress);
+                }
+                
                 if (data.status === 'processing') {
                     setTimeout(poll, 2000); // Poll every 2 seconds
+                } else {
+                    // Conversion finished (completed or failed)
+                    setIsConverting(false);
+                    if (data.status === 'completed') {
+                        setConversionProgress(100);
+                    }
                 }
             } catch (error) {
                 console.error('Status check error:', error);
@@ -418,11 +435,7 @@ const FileUpload = () => {
                         ) : file && previewType === 'video' ? (
                             <div className="text-center p-4">
                                 {/* Loading state for video thumbnail generation */}
-                                <div className="mx-auto mb-3 w-20 h-20 rounded-lg border-2 border-gray-300 shadow-sm bg-gray-200 flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                                </div>
-                                <p className="text-sm font-medium text-gray-700">Generating thumbnail...</p>
-                                <p className="text-xs text-gray-500 mt-1">Please wait</p>
+                                <DotsLoader message="Generating thumbnail..." />
                             </div>
                         ) : (
                             <div className="text-center p-8">
@@ -457,9 +470,16 @@ const FileUpload = () => {
                 <button
                     onClick={handleUpload}
                     disabled={!file || !targetFormat || isUploading || (uploadLimits && !uploadLimits.canUpload && !uploadLimits.unlimited)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg flex items-center justify-center"
                 >
-                    {isUploading ? '🔄 Uploading...' : '🚀 Convert File'}
+                    {isUploading ? (
+                        <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Uploading...
+                        </div>
+                    ) : (
+                        '🚀 Convert File'
+                    )}
                 </button>
             </div>
 
@@ -467,6 +487,20 @@ const FileUpload = () => {
             {conversionStatus && (
                 <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Conversion Status</h3>
+                    
+                    {/* Progress Bar */}
+                    {isConverting && (
+                        <div className="mb-6">
+                            <ProgressBar 
+                                progress={conversionProgress}
+                                status={conversionStatus.status}
+                                showPercentage={true}
+                                height="h-3"
+                                animated={true}
+                            />
+                        </div>
+                    )}
+                    
                     <p className="mb-4">
                         Status: <span className={`font-semibold ${
                             conversionStatus.status === 'processing' ? 'text-orange-600' :

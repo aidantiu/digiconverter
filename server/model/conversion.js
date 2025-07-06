@@ -37,6 +37,12 @@ const conversionSchema = new mongoose.Schema({
         enum: ['processing', 'completed', 'failed'],
         default: 'processing'
     },
+    progress: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
+    },
     downloadCount: {
         type: Number,
         default: 0

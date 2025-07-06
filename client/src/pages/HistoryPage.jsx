@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { PageLoader, CardLoader } from '../components/Loader';
+import { MiniProgressBar } from '../components/ProgressBar';
 
 const HistoryPage = () => {
     const [history, setHistory] = useState({ images: [], videos: [] });
@@ -138,6 +140,16 @@ const HistoryPage = () => {
                             {conversion.status}
                         </span>
                     </div>
+                    
+                    {/* Progress bar for processing conversions */}
+                    {conversion.status === 'processing' && (
+                        <div className="absolute bottom-0 left-0 right-0">
+                            <MiniProgressBar 
+                                progress={conversion.progress || 0} 
+                                status={conversion.status} 
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Content Section */}
@@ -170,14 +182,7 @@ const HistoryPage = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading your conversion history...</p>
-                </div>
-            </div>
-        );
+        return <PageLoader message="Loading your conversion history..." />;
     }
 
     return (

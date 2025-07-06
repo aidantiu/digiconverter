@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import Loader from '../components/Loader';
 
 function LoginPage() {
     const [formData, setFormData] = useState({
@@ -207,10 +208,17 @@ function LoginPage() {
 
                     <button 
                         type="submit" 
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none"
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none flex items-center justify-center"
                         disabled={isLoading}
                     >
-                        {isLoading ? '🔄 Logging in...' : '🚀 Login'}
+                        {isLoading ? (
+                            <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                Logging in...
+                            </div>
+                        ) : (
+                            '🚀 Login'
+                        )}
                     </button>
                 </form>
 

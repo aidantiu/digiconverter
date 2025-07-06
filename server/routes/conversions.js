@@ -171,6 +171,7 @@ router.get('/status/:conversionId', async (req, res) => {
             originalFileName: conversion.originalFileName,
             originalFormat: conversion.originalFormat,
             targetFormat: conversion.targetFormat,
+            progress: conversion.progress || 0,
             createdAt: conversion.createdAt
         });
 
@@ -267,7 +268,7 @@ router.get('/history/categorized', optionalAuth, async (req, res) => {
         // Find all conversions and categorize them - include converted file names for thumbnails
         const allConversions = await Conversion.find(query)
             .sort({ createdAt: -1 })
-            .select('originalFileName convertedFileName originalFormat targetFormat status createdAt fileSize')
+            .select('originalFileName convertedFileName originalFormat targetFormat status createdAt fileSize progress')
             .lean();
 
         // Categorize conversions
@@ -493,7 +494,7 @@ async function convertFile(file, targetFormat, conversionId) {
     const outputPath = path.join(outputDir, outputFileName);
 
     // Determine if the file is an image or video based on its extension
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         const isImage = /jpeg|jpg|png|gif|webp|bmp|tiff/.test(path.extname(file.originalname).toLowerCase());
         const isVideo = /mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg/.test(path.extname(file.originalname).toLowerCase());
 
@@ -501,11 +502,25 @@ async function convertFile(file, targetFormat, conversionId) {
         if (isImage) {
             console.log(`🖼️ Converting image: ${file.originalname} -> ${targetFormat}`);
             
+            // Set initial progress
+            try {
+                await Conversion.findByIdAndUpdate(conversionId, { progress: 10 });
+            } catch (updateError) {
+                console.warn('Could not update initial progress:', updateError.message);
+            }
+            
             // Handle image conversion with Sharp
             sharp(inputPath)
                 .toFormat(targetFormat)
                 .toFile(outputPath)
-                .then(() => {
+                .then(async () => {
+                    // Set progress to 100%
+                    try {
+                        await Conversion.findByIdAndUpdate(conversionId, { progress: 100 });
+                    } catch (updateError) {
+                        console.warn('Could not update final progress:', updateError.message);
+                    }
+                    
                     // Clean up original upload file
                     try {
                         if (fs.existsSync(inputPath)) {
@@ -534,10 +549,29 @@ async function convertFile(file, targetFormat, conversionId) {
                     .on('start', (commandLine) => {
                         console.log('FFmpeg command:', commandLine);
                     })
-                    .on('progress', (progress) => {
-                        console.log(`Processing: ${progress.percent}% done`);
+                    .on('progress', async (progress) => {
+                        const progressPercent = Math.round(progress.percent || 0);
+                        console.log(`Processing: ${progressPercent}% done`);
+                        
+                        // Update progress in database
+                        try {
+                            await Conversion.findByIdAndUpdate(conversionId, { 
+                                progress: progressPercent 
+                            });
+                        } catch (updateError) {
+                            console.warn('Could not update progress:', updateError.message);
+                        }
                     })
-                    .on('end', () => {
+                    .on('end', async () => {
+                        // Set progress to 100% and mark as completed
+                        try {
+                            await Conversion.findByIdAndUpdate(conversionId, { 
+                                progress: 100 
+                            });
+                        } catch (updateError) {
+                            console.warn('Could not update final progress:', updateError.message);
+                        }
+                        
                         // Clean up original upload file
                         try {
                             if (fs.existsSync(inputPath)) {
