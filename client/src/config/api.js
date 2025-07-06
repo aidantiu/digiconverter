@@ -12,6 +12,11 @@ export const API_ENDPOINTS = {
     status: (id) => `${API_BASE_URL}/api/conversions/status/${id}`,
     download: (id) => `${API_BASE_URL}/api/conversions/download/${id}`,
     history: `${API_BASE_URL}/api/conversions/history`,
+    preview: (id) => `${API_BASE_URL}/api/conversions/preview/${id}`,
+    
+    // Thumbnails
+    thumbnailImage: (id) => `${API_BASE_URL}/api/conversions/thumbnail/image/${id}`,
+    thumbnailVideo: (id) => `${API_BASE_URL}/api/conversions/thumbnail/video/${id}`,
 };
 
 export default API_BASE_URL;

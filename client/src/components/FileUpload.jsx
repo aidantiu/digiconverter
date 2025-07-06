@@ -20,6 +20,8 @@ const FileUpload = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [user, setUser] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [filePreview, setFilePreview] = useState(null);
+    const [previewType, setPreviewType] = useState(null);
 
     // Check upload limits on component mount
     useEffect(() => {
@@ -100,7 +102,76 @@ const FileUpload = () => {
     };
 
     const handleFileChange = (event) => {
-        setFile(event.target.files[0]);
+        const selectedFile = event.target.files[0];
+        setFile(selectedFile);
+
+        // Preview functionality
+        if (selectedFile) {
+            if (selectedFile.type.startsWith('image/')) {
+                // For images, use direct file URL
+                const objectUrl = URL.createObjectURL(selectedFile);
+                setFilePreview(objectUrl);
+                setPreviewType('image');
+            } else if (selectedFile.type.startsWith('video/')) {
+                // For videos, generate a thumbnail
+                generateVideoThumbnail(selectedFile);
+                setPreviewType('video');
+            } else {
+                setFilePreview(null);
+                setPreviewType(null);
+            }
+        } else {
+            setFilePreview(null);
+            setPreviewType(null);
+        }
+    };
+
+    // Function to generate thumbnail from video
+    const generateVideoThumbnail = (videoFile) => {
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        video.preload = 'metadata';
+        video.muted = true; // Required for autoplay in many browsers
+        
+        video.onloadedmetadata = () => {
+            // Set canvas dimensions to video dimensions
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Seek to 1 second or 10% of video duration, whichever is smaller
+            const seekTime = Math.min(1, video.duration * 0.1);
+            video.currentTime = seekTime;
+        };
+
+        video.onseeked = () => {
+            // Draw the video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert canvas to blob and create object URL
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const thumbnailUrl = URL.createObjectURL(blob);
+                    setFilePreview(thumbnailUrl);
+                }
+            }, 'image/jpeg', 0.8);
+            
+            // Clean up
+            video.remove();
+        };
+
+        video.onerror = () => {
+            console.warn('Could not generate video thumbnail');
+            // Fallback to a default video icon
+            setFilePreview(null);
+            video.remove();
+        };
+
+        // Load the video file
+        const videoUrl = URL.createObjectURL(videoFile);
+        video.src = videoUrl;
+        video.load();
     };
 
     const handleUpload = async () => {
@@ -226,6 +297,16 @@ const FileUpload = () => {
         }
     };
 
+    // Cleanup effect for file preview URLs
+    useEffect(() => {
+        return () => {
+            // Cleanup object URLs when component unmounts or file changes
+            if (filePreview && filePreview.startsWith('blob:')) {
+                URL.revokeObjectURL(filePreview);
+            }
+        };
+    }, [filePreview]);
+
     return (
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
             <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">File Converter</h2>
@@ -277,17 +358,85 @@ const FileUpload = () => {
 
             {/* File Upload */}
             <div className="space-y-6">
-                <input
-                    type="file"
-                    onChange={handleFileChange}
-                    accept="image/*,video/*"
-                    disabled={isUploading}
-                    className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+                {/* File Selection and Preview Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* File Input Section */}
+                    <div>
+                        <label htmlFor="file" className="block text-lg font-semibold text-gray-900 mb-4">
+                            📁 Select File to Convert
+                        </label>
+                        <input
+                            type="file"
+                            id="file"
+                            onChange={handleFileChange}
+                            accept="image/*,video/*"
+                            disabled={isUploading}
+                            className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                        />
+                        
+                        {file && (
+                            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center space-x-3">
+                                    <div className="text-2xl">
+                                        {file.type.startsWith('image/') ? '🖼️' : '🎥'}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                                        <p className="text-sm text-gray-600">
+                                            {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* File Preview Section */}
+                    <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center min-h-[200px]">
+                        {filePreview ? (
+                            <div className="text-center p-4">
+                                {/* Thumbnail Preview */}
+                                <div className="mx-auto mb-3 w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative">
+                                    <img
+                                        src={filePreview}
+                                        alt="File thumbnail"
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {/* Video overlay indicator */}
+                                    {previewType === 'video' && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                                            <span className="text-white text-lg">▶️</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* File Info */}
+                                <p className="text-sm font-medium text-gray-700 truncate">{file?.name}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {file && (file.size / (1024 * 1024)).toFixed(2)} MB • {previewType === 'video' ? 'video thumbnail' : previewType || 'file'}
+                                </p>
+                            </div>
+                        ) : file && previewType === 'video' ? (
+                            <div className="text-center p-4">
+                                {/* Loading state for video thumbnail generation */}
+                                <div className="mx-auto mb-3 w-20 h-20 rounded-lg border-2 border-gray-300 shadow-sm bg-gray-200 flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                                </div>
+                                <p className="text-sm font-medium text-gray-700">Generating thumbnail...</p>
+                                <p className="text-xs text-gray-500 mt-1">Please wait</p>
+                            </div>
+                        ) : (
+                            <div className="text-center p-8">
+                                <div className="text-4xl mb-2">📄</div>
+                                <p className="text-gray-600">File thumbnail will appear here</p>
+                                <p className="text-sm text-gray-500 mt-1">Select a file to see thumbnail</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
                 
                 {file && (
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-700">Convert to:</label>
+                        <label className="block text-lg font-semibold text-gray-700">🔄 Convert to:</label>
                         <select
                             value={targetFormat}
                             onChange={(e) => setTargetFormat(e.target.value)}
