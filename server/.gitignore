@@ -13,3 +13,7 @@ npm-debug.log
 # Ignore Docker-related files
 docker-compose.yml
 Dockerfile
+
+# Directories
+uploads
+processed

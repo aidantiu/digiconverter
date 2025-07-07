@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { authUtils } from '../utils/auth';
 import Loader from '../components/Loader';
 
 function LoginPage() {
@@ -15,22 +16,17 @@ function LoginPage() {
 
     // Clean up localStorage and check auth status on mount
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('authToken');
-            const userString = localStorage.getItem('user');
-            
-            // Test if user data is valid JSON
-            if (userString && userString.trim()) {
-                JSON.parse(userString); // This will throw if invalid
+        const checkAuth = async () => {
+            try {
+                const authStatus = await authUtils.checkAuthStatus();
+                setIsLoggedIn(authStatus.authenticated);
+            } catch (error) {
+                console.warn('Error checking auth status on login page:', error);
+                setIsLoggedIn(false);
             }
-            
-            setIsLoggedIn(!!token);
-        } catch (error) {
-            console.warn('Cleaning up corrupted localStorage on mount:', error);
-            localStorage.removeItem('user');
-            localStorage.removeItem('authToken');
-            setIsLoggedIn(false);
-        }
+        };
+        
+        checkAuth();
     }, []);
 
     const handleChange = (e) => {
@@ -58,9 +54,9 @@ function LoginPage() {
             const data = await response.json();
 
             if (response.ok) {
-                // Store token and user info
-                localStorage.setItem('authToken', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                // Store token and user info using auth utility
+                authUtils.setAuth(data.token, data.user);
+                localStorage.setItem('justLoggedIn', 'true'); // Set flag for welcome message
                 setIsLoggedIn(true);
                 
                 // Redirect to upload page
@@ -77,8 +73,7 @@ function LoginPage() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        authUtils.clearAuth();
         setIsLoggedIn(false);
         setFormData({
             email: 'test@digiconverter.com',
@@ -87,34 +82,7 @@ function LoginPage() {
     };
 
     const getStoredUser = () => {
-        try {
-            const userString = localStorage.getItem('user');
-            
-            // Debug: log what we're trying to parse
-            console.log('Raw user string from localStorage:', userString);
-            
-            // Check if userString is null, undefined, or empty
-            if (!userString || userString.trim() === '' || userString === 'undefined' || userString === 'null') {
-                console.log('No valid user data found in localStorage');
-                return null;
-            }
-            
-            const parsedUser = JSON.parse(userString);
-            console.log('Successfully parsed user:', parsedUser);
-            return parsedUser;
-        } catch (error) {
-            console.error('Error parsing stored user:', error);
-            console.log('Corrupted data found, cleaning up localStorage...');
-            
-            // Clear ALL potentially corrupted data
-            localStorage.removeItem('user');
-            localStorage.removeItem('authToken');
-            
-            // Update state to reflect the cleanup
-            setIsLoggedIn(false);
-            
-            return null;
-        }
+        return authUtils.getUser();
     };
 
     if (isLoggedIn) {

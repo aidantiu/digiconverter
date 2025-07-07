@@ -26,7 +26,19 @@ router.post('/register', async (req, res) => {
         const newUser = new User({ username, email, password });
         await newUser.save();
 
-        res.status(201).json({ message: 'User registered successfully' });
+        // Generate token and return user data for automatic login
+        const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        
+        res.status(201).json({ 
+            message: 'User registered successfully',
+            token,
+            user: {
+                id: newUser._id,
+                username: newUser.username,
+                email: newUser.email,
+                createdAt: newUser.createdAt
+            }
+        });
 
     } catch (error) {
         console.error('Error registering user:', error);
@@ -59,12 +71,63 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(200).json({ message: 'Login successful', token });
+        // Extend token expiration to 7 days for better user experience
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.status(200).json({ 
+            message: 'Login successful', 
+            token,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                createdAt: user.createdAt
+            }
+        });
 
     } catch (error) {
         console.error('Error logging in user:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Validate token endpoint
+router.get('/validate', async (req, res) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        
+        if (!token) {
+            return res.status(401).json({ valid: false, message: 'No token provided' });
+        }
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(decoded.id);
+            
+            if (!user) {
+                return res.status(401).json({ valid: false, message: 'User not found' });
+            }
+
+            res.status(200).json({ 
+                valid: true, 
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    createdAt: user.createdAt
+                }
+            });
+        } catch (jwtError) {
+            if (jwtError.name === 'TokenExpiredError') {
+                return res.status(401).json({ valid: false, message: 'Token expired', expired: true });
+            } else if (jwtError.name === 'JsonWebTokenError') {
+                return res.status(401).json({ valid: false, message: 'Invalid token' });
+            } else {
+                throw jwtError;
+            }
+        }
+    } catch (error) {
+        console.error('Error validating token:', error);
+        res.status(500).json({ valid: false, message: 'Server error' });
     }
 });
 

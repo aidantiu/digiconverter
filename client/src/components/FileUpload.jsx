@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { authUtils } from '../utils/auth';
 import Loader, { DotsLoader } from './Loader';
 import ProgressBar, { CircularProgress } from './ProgressBar';
+import SessionExpiredModal from './SessionExpiredModal';
+import ImageWithSpinner from './ImageWithSpinner';
 
 // Debug function - add to window for manual cleanup
 if (typeof window !== 'undefined') {
     window.clearDigiConverterData = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('authToken');
+        localStorage.removeItem('justLoggedIn');
         console.log('DigiConverter localStorage data cleared');
         window.location.reload();
     };
@@ -26,27 +30,26 @@ const FileUpload = () => {
     const [previewType, setPreviewType] = useState(null);
     const [conversionProgress, setConversionProgress] = useState(0);
     const [isConverting, setIsConverting] = useState(false);
+    const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
+    const [showSessionExpired, setShowSessionExpired] = useState(false);
 
     // Check upload limits on component mount
     useEffect(() => {
-        // Clean up any corrupted localStorage data on mount and set user state
-        try {
-            const userString = localStorage.getItem('user');
-            const token = localStorage.getItem('authToken');
+        // Use quick auth status - no server validation on page load
+        const authStatus = authUtils.getQuickAuthStatus();
+        
+        if (authStatus.authenticated) {
+            setUser(authStatus.user);
+            setIsLoggedIn(true);
             
-            // More robust checking for valid user data
-            if (userString && userString.trim() !== '' && userString !== 'undefined' && userString !== 'null') {
-                const parsedUser = JSON.parse(userString);
-                setUser(parsedUser);
-            } else {
-                setUser(null);
+            // Show welcome message only if user just logged in
+            const justLoggedIn = localStorage.getItem('justLoggedIn');
+            if (justLoggedIn === 'true') {
+                setShowWelcomeMessage(true);
+                // Clear the flag so it doesn't show again
+                localStorage.removeItem('justLoggedIn');
             }
-            
-            setIsLoggedIn(!!token && token !== 'undefined' && token !== 'null');
-        } catch (error) {
-            console.warn('Cleaning up corrupted localStorage data:', error);
-            localStorage.removeItem('user');
-            localStorage.removeItem('authToken');
+        } else {
             setUser(null);
             setIsLoggedIn(false);
         }
@@ -56,7 +59,7 @@ const FileUpload = () => {
 
     const checkUploadLimits = async () => {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = authUtils.getToken();
             const response = await fetch(API_ENDPOINTS.limits, {
                 headers: {
                     'Authorization': token ? `Bearer ${token}` : ''
@@ -190,13 +193,34 @@ const FileUpload = () => {
             return;
         }
 
+        // If user appears logged in, validate session before uploading
+        if (isLoggedIn) {
+            const validation = await authUtils.validateForAction();
+            if (!validation.valid) {
+                if (validation.expired) {
+                    // Show session expired modal
+                    setShowSessionExpired(true);
+                    setUser(null);
+                    setIsLoggedIn(false);
+                    return;
+                } else {
+                    // Other validation error, clear auth silently
+                    authUtils.clearAuth();
+                    setUser(null);
+                    setIsLoggedIn(false);
+                    // Refresh upload limits for anonymous user
+                    checkUploadLimits();
+                }
+            }
+        }
+
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('targetFormat', targetFormat);
 
         try {
-            const token = localStorage.getItem('authToken');
+            const token = authUtils.getToken();
             const response = await fetch(API_ENDPOINTS.upload, {
                 method: 'POST',
                 headers: {
@@ -272,6 +296,12 @@ const FileUpload = () => {
                     setIsConverting(false);
                     if (data.status === 'completed') {
                         setConversionProgress(100);
+                        // Notify other components that a new conversion completed
+                        window.dispatchEvent(new CustomEvent('conversionCompleted', {
+                            detail: { conversionId: conversionId, status: data.status }
+                        }));
+                        // Also update localStorage timestamp for history refresh
+                        localStorage.setItem('lastConversionCompleted', Date.now().toString());
                     }
                 }
             } catch (error) {
@@ -289,10 +319,11 @@ const FileUpload = () => {
     };
 
     const getImageFormats = () => ['jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff'];
-    const getVideoFormats = () => ['mp4', 'avi', 'mov', 'wmv', 'webm', 'mkv'];
+    const getVideoFormats = () => ['mp4', 'avi', 'mov', 'wmv', 'webm', 'mkv', 'flv', 'mpeg', 'mpg', 'm4v'];
 
+    // Check if the file is an image or video based on its extension
     const isImageFile = file && /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i.test(file.name);
-    const isVideoFile = file && /\.(mp4|avi|mov|wmv|flv|mkv|webm)$/i.test(file.name);
+    const isVideoFile = file && /\.(mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg|m4v|3gp)$/i.test(file.name);
     
     // Function to safely get stored user (utility function)
     const getStoredUser = () => {
@@ -326,10 +357,9 @@ const FileUpload = () => {
 
     return (
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">File Converter</h2>
-            
+
             {/* Authentication Status */}
-            {isLoggedIn ? (
+            {isLoggedIn && showWelcomeMessage && (
                 <div className="bg-gradient-to-r from-green-100 to-green-50 border-2 border-green-200 rounded-xl p-6 mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <span className="text-gray-800 text-lg">👋 Welcome back, <strong>{user?.username}</strong>!</span>
@@ -338,7 +368,9 @@ const FileUpload = () => {
                         </div>
                     </div>
                 </div>
-            ) : (
+            )}
+            
+            {!isLoggedIn && (
                 <div className="bg-gradient-to-r from-orange-100 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <span className="text-orange-800 text-lg">🎯 You're using anonymous mode</span>
@@ -359,15 +391,10 @@ const FileUpload = () => {
                             : ` (Resets at ${new Date(uploadLimits.resetTime).toLocaleString()})`
                         }
                     </p>
-                    {!uploadLimits.canUpload && (
-                        <p>
-                            <strong>Want unlimited uploads? <Link to="/login" className="text-purple-600 hover:text-purple-800 underline">Login now!</Link></strong>
-                        </p>
-                    )}
                 </div>
             )}
 
-            {uploadLimits && uploadLimits.unlimited && (
+            {uploadLimits && uploadLimits.unlimited && showWelcomeMessage && (
                 <div className="bg-gradient-to-r from-teal-100 to-cyan-50 border-2 border-teal-200 rounded-lg p-4 mb-6 text-center text-teal-800">
                     <p>🚀 <strong>Unlimited uploads active!</strong> Convert as many files as you need.</p>
                 </div>
@@ -425,25 +452,20 @@ const FileUpload = () => {
                                         
                                         {/* Thumbnail inside file info */}
                                         {filePreview ? (
-                                            <div className="w-auto h-auto rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative bg-white">
-                                                <img
+                                            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto my-2 rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative bg-white">
+                                                <ImageWithSpinner
                                                     src={filePreview}
                                                     alt="File thumbnail"
-                                                    className="w-full h-full object-cover"
+                                                    className="w-full h-auto object-cover"
+                                                    spinnerSize="medium"
                                                 />
-                                                {/* Video overlay indicator */}
-                                                {previewType === 'video' && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
-                                                        <span className="text-white text-sm">▶️</span>
-                                                    </div>
-                                                )}
                                             </div>
                                         ) : file && previewType === 'video' ? (
-                                            <div className="w-24 h-24 rounded-lg border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg border-2 border-gray-300 bg-gray-100 flex items-center justify-center mx-auto">
                                                 <DotsLoader message="" />
                                             </div>
                                         ) : (
-                                            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center mx-auto">
                                                 <span className="text-gray-400 text-xs text-center">No<br/>Preview</span>
                                             </div>
                                         )}
@@ -454,21 +476,23 @@ const FileUpload = () => {
                 
                 {file && (
                     <div className="space-y-4 mt-4">
-                        <label className="block text-lg font-semibold text-gray-700">🔄 Convert to:</label>
-                        <select
-                            value={targetFormat}
-                            onChange={(e) => setTargetFormat(e.target.value)}
-                            disabled={isUploading}
-                            className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 disabled:opacity-50"
-                        >
-                            <option value="">Select format</option>
-                            {isImageFile && getImageFormats().map(format => (
-                                <option key={format} value={format}>{format.toUpperCase()}</option>
-                            ))}
-                            {isVideoFile && getVideoFormats().map(format => (
-                                <option key={format} value={format}>{format.toUpperCase()}</option>
-                            ))}
-                        </select>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
+                            <label className="text-lg font-semibold text-gray-700 sm:whitespace-nowrap">🔄 Convert to:</label>
+                            <select
+                                value={targetFormat}
+                                onChange={(e) => setTargetFormat(e.target.value)}
+                                disabled={isUploading}
+                                className="flex-1 p-3 border border-gray-300 rounded-lg bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 disabled:opacity-50"
+                            >
+                                <option value="">Select format</option>
+                                {isImageFile && getImageFormats().map(format => (
+                                    <option key={format} value={format}>{format.toUpperCase()}</option>
+                                ))}
+                                {isVideoFile && getVideoFormats().map(format => (
+                                    <option key={format} value={format}>{format.toUpperCase()}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 )}
 
@@ -561,6 +585,20 @@ const FileUpload = () => {
                     )}
                 </div>
             )}
+
+            {/* Session Expired Modal */}
+            <SessionExpiredModal
+                isOpen={showSessionExpired}
+                onClose={() => {
+                    setShowSessionExpired(false);
+                    // Refresh upload limits for anonymous user
+                    checkUploadLimits();
+                }}
+                onLogin={() => {
+                    // Optional callback for when user clicks login
+                    localStorage.setItem('returnToUpload', 'true');
+                }}
+            />
         </div>
     );
 };

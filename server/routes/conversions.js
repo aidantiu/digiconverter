@@ -1,64 +1,18 @@
 const { express } = require('../utils/dependencies');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const sharp = require('sharp');
-const ffmpeg = require('fluent-ffmpeg');
 const { Conversion } = require('../model/models');
 const { optionalAuth } = require('../middleware/auth');
 const { checkUploadLimit } = require('../middleware/uploadLimit');
-
-// Configure FFmpeg path if specified in environment variables or if FFmpeg is in a custom location
-const customFfmpegPath = process.env.FFMPEG_PATH;
-if (customFfmpegPath && fs.existsSync(customFfmpegPath)) {
-    console.log(`🔧 Using custom FFmpeg path: ${customFfmpegPath}`);
-    ffmpeg.setFfmpegPath(customFfmpegPath);
-} else {
-    // Try common Windows FFmpeg installation paths
-    const commonPaths = [
-        'C:\\ffmpeg\\bin\\ffmpeg.exe',
-        'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
-        'C:\\tools\\ffmpeg\\bin\\ffmpeg.exe'
-    ];
-    
-    for (const testPath of commonPaths) {
-        if (fs.existsSync(testPath)) {
-            console.log(`🔧 Found FFmpeg at: ${testPath}`);
-            ffmpeg.setFfmpegPath(testPath);
-            break;
-        }
-    }
-}
+const { convertFile } = require('../utils/conversionProcessor');
 
 const router = express.Router();
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
+// Configure multer for memory storage (no file system storage)
+const storage = multer.memoryStorage();
 
-    // Set the destination for uploaded files
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../uploads');
-
-        // Ensure the upload directory exists
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-
-        // Store the upload info in the request object for later use
-        cb(null, uploadDir);
-    },
-
-    // Set the filename for uploaded files
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-// Create the uploads directory if it doesn't exist
+// Create the uploads with memory storage
 const upload = multer({
-
-    // Configure multer with the storage settings
     storage: storage,
     limits: {
         fileSize: 100 * 1024 * 1024, // 100MB limit
@@ -67,15 +21,29 @@ const upload = multer({
     // File filter to allow only specific file types
     fileFilter: (req, file, cb) => {
         // Allow common image and video formats
-        const allowedTypes = /jpeg|jpg|png|gif|webp|bmp|tiff|mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
+        const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|bmp|tiff|mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg)$/i;
+        const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
         
-        // Check if the file type is allowed
-        if (mimetype && extname) {
+        // Common MIME types for images and videos
+        const allowedMimeTypes = [
+            // Image MIME types
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+            // Video MIME types
+            'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 
+            'video/x-flv', 'video/x-matroska', 'video/webm', 'video/3gpp', 'video/x-ms-asf',
+            // Additional common MIME types for MOV files
+            'application/octet-stream'
+        ];
+        
+        const mimetypeAllowed = allowedMimeTypes.includes(file.mimetype);
+        
+        // Allow if either extension is valid OR mimetype is valid (more lenient approach)
+        if (extname || mimetypeAllowed) {
+            console.log(`✅ File accepted: ${file.originalname} (${file.mimetype})`);
             return cb(null, true);
         } else {
-            cb(new Error('Only image and video files are allowed'));
+            console.log(`❌ File rejected: ${file.originalname} (${file.mimetype})`);
+            cb(new Error('Only image and video files are allowed. Supported formats: JPEG, PNG, GIF, WebP, BMP, TIFF, MP4, AVI, MOV, WMV, FLV, MKV, WebM, MPEG, MPG'));
         }
     }
 });
@@ -99,13 +67,15 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
         const originalFormat = path.extname(req.file.originalname).slice(1).toLowerCase();
         const clientIP = req.ip || req.connection.remoteAddress;
 
-        // Create conversion record
+        // Create conversion record with file data
         const conversion = new Conversion({
             originalFileName: req.file.originalname,
             // convertedFileName will be set after conversion completes
             originalFormat: originalFormat,
             targetFormat: targetFormat.toLowerCase(),
             fileSize: req.file.size,
+            originalFileData: req.file.buffer, // Store file data in database
+            originalMimeType: req.file.mimetype,
             userId: req.user ? req.user._id : null,
             ipAddress: clientIP,
             status: 'processing'
@@ -123,19 +93,27 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
             });
         }
 
-        // Start conversion process
-        convertFile(req.file, targetFormat, conversion._id)
-            .then(async (convertedFileName) => {
-                console.log(`✅ Conversion completed: ${convertedFileName}`);
-                conversion.convertedFileName = convertedFileName;
+        // Start conversion process with timeout
+        const conversionPromise = convertFile(req.file.buffer, req.file.originalname, req.file.mimetype, targetFormat, conversion._id);
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('Conversion timeout after 10 minutes'));
+            }, 10 * 60 * 1000); // 10 minutes timeout
+        });
+
+        Promise.race([conversionPromise, timeoutPromise])
+            .then(async (result) => {
+                console.log(`✅ Conversion completed: ${result.fileName}`);
                 conversion.status = 'completed';
                 await conversion.save();
+                console.log(`💾 Conversion record updated in database: ${conversion._id}`);
             })
             .catch(async (error) => {
                 console.error('❌ Conversion failed:', error.message);
                 console.error('Full error:', error);
                 conversion.status = 'failed';
                 await conversion.save();
+                console.log(`💾 Conversion record marked as failed in database: ${conversion._id}`);
             });
 
         // Add upload info to the request for later use
@@ -185,7 +163,7 @@ router.get('/status/:conversionId', async (req, res) => {
 // Download converted file
 router.get('/download/:conversionId', async (req, res) => {
 
-    // This endpoint allows users to download their converted file.
+    // This endpoint allows users to download their converted file from database.
     try {
 
         // Find the conversion record by ID
@@ -199,15 +177,9 @@ router.get('/download/:conversionId', async (req, res) => {
             return res.status(400).json({ message: 'Conversion not completed yet' });
         }
 
-        // Check if converted file name exists
-        if (!conversion.convertedFileName) {
+        // Check if converted file data exists
+        if (!conversion.convertedFileData || !conversion.convertedFileName) {
             return res.status(400).json({ message: 'Converted file not ready' });
-        }
-
-        // Construct the file path for the converted file
-        const filePath = path.join(__dirname, '../processed', conversion.convertedFileName);
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'Converted file not found' });
         }
 
         // Increment download count
@@ -215,7 +187,13 @@ router.get('/download/:conversionId', async (req, res) => {
         await conversion.save();
 
         // Set headers for file download
-        res.download(filePath, `${path.parse(conversion.originalFileName).name}.${conversion.targetFormat}`);
+        const downloadFileName = `${path.parse(conversion.originalFileName).name}.${conversion.targetFormat}`;
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
+        res.setHeader('Content-Type', conversion.convertedMimeType || 'application/octet-stream');
+        res.setHeader('Content-Length', conversion.convertedFileData.length);
+
+        // Send the file data
+        res.send(conversion.convertedFileData);
     } catch (error) {
         console.error('Download error:', error);
         res.status(500).json({ message: 'Server error during download' });
@@ -259,10 +237,12 @@ router.get('/history/categorized', optionalAuth, async (req, res) => {
         // If user is authenticated, filter by user ID
         if (req.user) {
             query.userId = req.user._id;
+            console.log(`📋 Fetching categorized history for user: ${req.user._id}`);
         } else {
             // For anonymous users, show their IP-based history
             const clientIP = req.ip || req.connection.remoteAddress;
             query = { ipAddress: clientIP, userId: null };
+            console.log(`📋 Fetching categorized history for anonymous IP: ${clientIP}`);
         }
 
         // Find all conversions and categorize them - include converted file names for thumbnails
@@ -271,24 +251,49 @@ router.get('/history/categorized', optionalAuth, async (req, res) => {
             .select('originalFileName convertedFileName originalFormat targetFormat status createdAt fileSize progress')
             .lean();
 
+        console.log(`📊 Total conversions found: ${allConversions.length}`);
+
         // Categorize conversions
         const imageFormats = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp', 'tiff'];
-        const videoFormats = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'mpeg', 'mpg'];
+        const videoFormats = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'mpeg', 'mpg', 'm4v', '3gp'];
 
-        const images = allConversions
-            .filter(conv => imageFormats.includes(conv.originalFormat.toLowerCase()))
-            .slice(0, 5);
+        // Filter and get the last 5 image conversions (most recent first)
+        const imageConversions = allConversions.filter(conv => 
+            imageFormats.includes(conv.originalFormat.toLowerCase())
+        );
+        const images = imageConversions.slice(0, 5);
 
-        const videos = allConversions
-            .filter(conv => videoFormats.includes(conv.originalFormat.toLowerCase()))
-            .slice(0, 5);
+        // Filter and get the last 5 video conversions (most recent first)
+        const videoConversions = allConversions.filter(conv => 
+            videoFormats.includes(conv.originalFormat.toLowerCase())
+        );
+        const videos = videoConversions.slice(0, 5);
+
+        console.log(`📸 Image conversions found: ${imageConversions.length}, returning: ${images.length}`);
+        console.log(`🎬 Video conversions found: ${videoConversions.length}, returning: ${videos.length}`);
+
+        // Log the most recent conversions for debugging
+        if (images.length > 0) {
+            console.log(`📸 Most recent image: ${images[0].originalFileName} (${new Date(images[0].createdAt).toISOString()})`);
+        }
+        if (videos.length > 0) {
+            console.log(`🎬 Most recent video: ${videos[0].originalFileName} (${new Date(videos[0].createdAt).toISOString()})`);
+        }
+
+        // Log all image and video conversion IDs for debugging
+        console.log(`📸 Image conversion IDs: [${images.map(i => i._id.toString()).join(', ')}]`);
+        console.log(`🎬 Video conversion IDs: [${videos.map(v => v._id.toString()).join(', ')}]`);
 
         res.status(200).json({
             images,
             videos,
             total: {
                 images: images.length,
-                videos: videos.length
+                videos: videos.length,
+                totalFound: {
+                    images: imageConversions.length,
+                    videos: videoConversions.length
+                }
             }
         });
     } catch (error) {
@@ -338,46 +343,19 @@ router.get('/limits', optionalAuth, async (req, res) => {
     }
 });
 
-// Cleanup endpoint (should be called by a cron job)
+// Cleanup endpoint (delete expired conversions from database)
 router.delete('/cleanup', async (req, res) => {
 
-    // This endpoint cleans up expired conversions and their associated files.
+    // This endpoint cleans up expired conversions from the database.
     try {
-        // Delete expired conversions and their files
-        const expiredConversions = await Conversion.find({
+        // Delete expired conversions (MongoDB TTL will handle this automatically, but we can manually clean up too)
+        const result = await Conversion.deleteMany({
             expiresAt: { $lt: new Date() }
         });
 
-        let deletedFiles = 0;
-        let deletedRecords = 0;
-
-        // Loop through each expired conversion
-        for (const conversion of expiredConversions) {
-            // Delete the physical file
-            if (conversion.convertedFileName) {
-                const filePath = path.join(__dirname, '../processed', conversion.convertedFileName);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                    deletedFiles++;
-                }
-            }
-            
-            // Delete video thumbnail if it exists
-            const thumbnailPath = path.join(__dirname, '../processed', `thumb_${conversion._id}.jpg`);
-            if (fs.existsSync(thumbnailPath)) {
-                fs.unlinkSync(thumbnailPath);
-                deletedFiles++;
-            }
-            
-            // Delete the record
-            await Conversion.findByIdAndDelete(conversion._id);
-            deletedRecords++;
-        }
-
         res.status(200).json({
             message: 'Cleanup completed',
-            deletedFiles,
-            deletedRecords
+            deletedRecords: result.deletedCount
         });
 
     } catch (error) {
@@ -386,90 +364,61 @@ router.delete('/cleanup', async (req, res) => {
     }
 });
 
-// Get thumbnail for images (serve the converted file as thumbnail)
-router.get('/thumbnail/image/:conversionId', async (req, res) => {
+// Get thumbnail for images (serve from database)
+router.get('/thumbnail/image/:conversionId', optionalAuth, async (req, res) => {
     try {
+        console.log(`📸 Requesting image thumbnail for conversion: ${req.params.conversionId}`);
+        
         const conversion = await Conversion.findById(req.params.conversionId);
         if (!conversion) {
+            console.log(`❌ Conversion not found: ${req.params.conversionId}`);
             return res.status(404).json({ message: 'Conversion not found' });
         }
 
+        console.log(`📊 Conversion status: ${conversion.status}, has thumbnail: ${!!conversion.thumbnailData}`);
+
         // Check conversion status
         if (conversion.status === 'failed') {
+            console.log(`❌ Conversion failed for: ${req.params.conversionId}`);
             return res.status(400).json({ message: 'Conversion failed', status: 'failed' });
         }
 
         if (conversion.status === 'processing') {
+            console.log(`⏳ Conversion still processing: ${req.params.conversionId}`);
             return res.status(202).json({ message: 'Conversion still processing', status: 'processing' });
         }
 
-        if (conversion.status !== 'completed' || !conversion.convertedFileName) {
+        if (conversion.status !== 'completed' || !conversion.thumbnailData) {
+            console.log(`❌ Thumbnail not available for: ${req.params.conversionId}, status: ${conversion.status}`);
             return res.status(404).json({ message: 'Thumbnail not available' });
         }
 
-        const filePath = path.join(__dirname, '../processed', conversion.convertedFileName);
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'Thumbnail file not found' });
-        }
-
-        // Serve the image file directly
-        res.sendFile(filePath);
+        console.log(`✅ Serving image thumbnail from database`);
+        // Set proper headers for image serving
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Content-Type', conversion.thumbnailMimeType || 'image/jpeg');
+        res.setHeader('Content-Length', conversion.thumbnailData.length);
+        
+        // Serve the thumbnail data
+        res.send(conversion.thumbnailData);
     } catch (error) {
-        console.error('Thumbnail error:', error);
+        console.error('❌ Image thumbnail error:', error);
         res.status(500).json({ message: 'Server error serving thumbnail' });
     }
 });
 
-// Generate and serve video thumbnail (extract frame from video)
-router.get('/thumbnail/video/:conversionId', async (req, res) => {
+// Generate and serve video thumbnail (TODO: Update for database storage)
+router.get('/thumbnail/video/:conversionId', optionalAuth, async (req, res) => {
     try {
         const conversion = await Conversion.findById(req.params.conversionId);
         if (!conversion) {
             return res.status(404).json({ message: 'Conversion not found' });
         }
 
-        // Check conversion status
-        if (conversion.status === 'failed') {
-            return res.status(400).json({ message: 'Conversion failed', status: 'failed' });
-        }
-
-        if (conversion.status === 'processing') {
-            return res.status(202).json({ message: 'Conversion still processing', status: 'processing' });
-        }
-
-        if (conversion.status !== 'completed' || !conversion.convertedFileName) {
-            return res.status(404).json({ message: 'Thumbnail not available' });
-        }
-
-        const videoPath = path.join(__dirname, '../processed', conversion.convertedFileName);
-        if (!fs.existsSync(videoPath)) {
-            return res.status(404).json({ message: 'Video file not found' });
-        }
-
-        // Generate thumbnail filename
-        const thumbnailName = `thumb_${conversion._id}.jpg`;
-        const thumbnailPath = path.join(__dirname, '../processed', thumbnailName);
-
-        // Check if thumbnail already exists
-        if (fs.existsSync(thumbnailPath)) {
-            return res.sendFile(thumbnailPath);
-        }
-
-        // Generate thumbnail from video
-        ffmpeg(videoPath)
-            .screenshot({
-                timestamps: ['00:00:01'], // Take screenshot at 1 second
-                filename: thumbnailName,
-                folder: path.join(__dirname, '../processed'),
-                size: '320x240'
-            })
-            .on('end', () => {
-                res.sendFile(thumbnailPath);
-            })
-            .on('error', (error) => {
-                console.error('Video thumbnail generation error:', error);
-                res.status(500).json({ message: 'Failed to generate video thumbnail' });
-            });
+        // For now, return a placeholder response until video processing is updated
+        res.status(501).json({ message: 'Video thumbnails temporarily unavailable - updating to database storage' });
 
     } catch (error) {
         console.error('Video thumbnail error:', error);
@@ -477,135 +426,40 @@ router.get('/thumbnail/video/:conversionId', async (req, res) => {
     }
 });
 
-// Helper function to convert files
-async function convertFile(file, targetFormat, conversionId) {
+// Check for stuck conversions and mark them as failed
+router.post('/fix-stuck-conversions', async (req, res) => {
+    try {
+        // Find conversions that have been processing for more than 10 minutes
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const stuckConversions = await Conversion.find({
+            status: 'processing',
+            createdAt: { $lt: tenMinutesAgo }
+        });
 
-    // This function handles the conversion of files using Sharp for images and FFmpeg for videos.
-    const inputPath = file.path;
-    const outputDir = path.join(__dirname, '../processed');
-    
-    // Ensure the output directory exists
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    // Generate a unique output file name
-    const outputFileName = `${conversionId}_${Date.now()}.${targetFormat}`;
-    const outputPath = path.join(outputDir, outputFileName);
-
-    // Determine if the file is an image or video based on its extension
-    return new Promise(async (resolve, reject) => {
-        const isImage = /jpeg|jpg|png|gif|webp|bmp|tiff/.test(path.extname(file.originalname).toLowerCase());
-        const isVideo = /mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg/.test(path.extname(file.originalname).toLowerCase());
-
-        // If the file type is not supported, reject the promise
-        if (isImage) {
-            console.log(`🖼️ Converting image: ${file.originalname} -> ${targetFormat}`);
-            
-            // Set initial progress
-            try {
-                await Conversion.findByIdAndUpdate(conversionId, { progress: 10 });
-            } catch (updateError) {
-                console.warn('Could not update initial progress:', updateError.message);
-            }
-            
-            // Handle image conversion with Sharp
-            sharp(inputPath)
-                .toFormat(targetFormat)
-                .toFile(outputPath)
-                .then(async () => {
-                    // Set progress to 100%
-                    try {
-                        await Conversion.findByIdAndUpdate(conversionId, { progress: 100 });
-                    } catch (updateError) {
-                        console.warn('Could not update final progress:', updateError.message);
-                    }
-                    
-                    // Clean up original upload file
-                    try {
-                        if (fs.existsSync(inputPath)) {
-                            fs.unlinkSync(inputPath);
-                        }
-                    } catch (cleanupError) {
-                        console.warn('Could not delete original file:', cleanupError.message);
-                    }
-                    console.log(`✅ Image conversion completed: ${outputFileName}`);
-                    resolve(outputFileName);
-                })
-                .catch((error) => {
-                    console.error(`❌ Image conversion failed:`, error);
-                    reject(error);
-                });
-
-        // If the file is a video, handle conversion with FFmpeg
-        } else if (isVideo) {
-            console.log(`🎥 Converting video: ${file.originalname} -> ${targetFormat}`);
-            
-            // Check if FFmpeg is available
-            try {
-                // Handle video conversion with FFmpeg
-                ffmpeg(inputPath)
-                    .toFormat(targetFormat)
-                    .on('start', (commandLine) => {
-                        console.log('FFmpeg command:', commandLine);
-                    })
-                    .on('progress', async (progress) => {
-                        const progressPercent = Math.round(progress.percent || 0);
-                        console.log(`Processing: ${progressPercent}% done`);
-                        
-                        // Update progress in database
-                        try {
-                            await Conversion.findByIdAndUpdate(conversionId, { 
-                                progress: progressPercent 
-                            });
-                        } catch (updateError) {
-                            console.warn('Could not update progress:', updateError.message);
-                        }
-                    })
-                    .on('end', async () => {
-                        // Set progress to 100% and mark as completed
-                        try {
-                            await Conversion.findByIdAndUpdate(conversionId, { 
-                                progress: 100 
-                            });
-                        } catch (updateError) {
-                            console.warn('Could not update final progress:', updateError.message);
-                        }
-                        
-                        // Clean up original upload file
-                        try {
-                            if (fs.existsSync(inputPath)) {
-                                fs.unlinkSync(inputPath);
-                            }
-                        } catch (cleanupError) {
-                            console.warn('Could not delete original file:', cleanupError.message);
-                        }
-                        console.log(`✅ Video conversion completed: ${outputFileName}`);
-                        resolve(outputFileName);
-                    })
-                    .on('error', (error) => {
-                        console.error(`❌ Video conversion failed:`, error);
-                        
-                        // If FFmpeg is not found, provide helpful error message
-                        if (error.message.includes('Cannot find ffmpeg') || 
-                            error.message.includes('ffmpeg was killed') ||
-                            error.message.includes('spawn ffmpeg ENOENT')) {
-                            reject(new Error('FFmpeg is not installed. Please install FFmpeg to enable video conversion. For now, only image conversion is available.'));
-                        } else {
-                            reject(error);
-                        }
-                    })
-                    .save(outputPath);
-                    
-            } catch (error) {
-                console.error(`❌ FFmpeg error:`, error);
-                reject(new Error('Video conversion is currently unavailable. FFmpeg is not properly installed.'));
-            }
-        } else {
-            reject(new Error('Unsupported file type. Please upload an image (JPEG, PNG, GIF, WebP, BMP, TIFF) or video file.'));
+        let fixedCount = 0;
+        for (const conversion of stuckConversions) {
+            console.log(`🔧 Fixing stuck conversion: ${conversion._id}`);
+            conversion.status = 'failed';
+            conversion.progress = 0;
+            await conversion.save();
+            fixedCount++;
         }
-    });
-}
+
+        res.status(200).json({
+            message: `Fixed ${fixedCount} stuck conversions`,
+            fixed: fixedCount,
+            conversions: stuckConversions.map(c => ({
+                id: c._id,
+                originalFileName: c.originalFileName,
+                createdAt: c.createdAt
+            }))
+        });
+
+    } catch (error) {
+        console.error('Fix stuck conversions error:', error);
+        res.status(500).json({ message: 'Server error fixing stuck conversions' });
+    }
+});
 
 module.exports = router;
 
