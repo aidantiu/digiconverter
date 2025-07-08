@@ -40,17 +40,25 @@ async function processImageConversion(fileBuffer, originalName, mimeType, target
         const convertedFileName = `converted_${conversionId}.${targetFormat}`;
         const convertedMimeType = getImageMimeType(targetFormat);
 
-        // Generate thumbnail for display
+        // Generate thumbnail for display with better compression
         const thumbnailBuffer = await sharp(convertedBuffer)
-            .resize(300, 300, { fit: 'inside', withoutEnlargement: true })
-            .jpeg({ quality: 80 })
+            .resize(300, 300, { 
+                fit: 'inside', 
+                withoutEnlargement: true,
+                background: { r: 255, g: 255, b: 255, alpha: 1 }
+            })
+            .jpeg({ 
+                quality: 75, // Reduced quality for smaller file size
+                progressive: true,
+                mozjpeg: true // Better compression
+            })
             .toBuffer();
 
         // Update conversion record with file data
         await Conversion.findByIdAndUpdate(conversionId, { 
             progress: 100,
             convertedFileName: convertedFileName,
-            convertedFileData: convertedBuffer,
+            convertedData: convertedBuffer,
             convertedMimeType: convertedMimeType,
             thumbnailData: thumbnailBuffer,
             thumbnailMimeType: 'image/jpeg'

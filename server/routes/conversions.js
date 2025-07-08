@@ -178,7 +178,7 @@ router.get('/download/:conversionId', async (req, res) => {
         }
 
         // Check if converted file data exists
-        if (!conversion.convertedFileData || !conversion.convertedFileName) {
+        if (!conversion.convertedData || !conversion.convertedFileName) {
             return res.status(400).json({ message: 'Converted file not ready' });
         }
 
@@ -190,10 +190,10 @@ router.get('/download/:conversionId', async (req, res) => {
         const downloadFileName = `${path.parse(conversion.originalFileName).name}.${conversion.targetFormat}`;
         res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
         res.setHeader('Content-Type', conversion.convertedMimeType || 'application/octet-stream');
-        res.setHeader('Content-Length', conversion.convertedFileData.length);
+        res.setHeader('Content-Length', conversion.convertedData.length);
 
         // Send the file data
-        res.send(conversion.convertedFileData);
+        res.send(conversion.convertedData);
     } catch (error) {
         console.error('Download error:', error);
         res.status(500).json({ message: 'Server error during download' });
@@ -394,6 +394,11 @@ router.get('/thumbnail/image/:conversionId', optionalAuth, async (req, res) => {
         }
 
         console.log(`✅ Serving image thumbnail from database`);
+        
+        // Set aggressive caching headers for thumbnails
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); // 24 hours
+        res.setHeader('ETag', `"thumb-${conversion._id}-${conversion.updatedAt || Date.now()}"`);
+        
         // Set proper headers for image serving
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -409,20 +414,44 @@ router.get('/thumbnail/image/:conversionId', optionalAuth, async (req, res) => {
     }
 });
 
-// Generate and serve video thumbnail (TODO: Update for database storage)
+// Get thumbnail for videos (serve from database)
 router.get('/thumbnail/video/:conversionId', optionalAuth, async (req, res) => {
     try {
+        console.log(`🎬 Requesting video thumbnail for conversion: ${req.params.conversionId}`);
+        
         const conversion = await Conversion.findById(req.params.conversionId);
         if (!conversion) {
+            console.log(`❌ Conversion not found: ${req.params.conversionId}`);
             return res.status(404).json({ message: 'Conversion not found' });
         }
 
-        // For now, return a placeholder response until video processing is updated
-        res.status(501).json({ message: 'Video thumbnails temporarily unavailable - updating to database storage' });
+        console.log(`📊 Conversion status: ${conversion.status}, has thumbnail: ${!!conversion.thumbnailData}`);
+
+        // Check if conversion is complete and has thumbnail data
+        if (conversion.status !== 'completed' || !conversion.thumbnailData) {
+            console.log(`❌ Video thumbnail not available for: ${req.params.conversionId}, status: ${conversion.status}`);
+            return res.status(404).json({ message: 'Video thumbnail not available' });
+        }
+
+        console.log(`✅ Serving video thumbnail from database`);
+        
+        // Set aggressive caching headers for video thumbnails
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); // 24 hours
+        res.setHeader('ETag', `"video-thumb-${conversion._id}-${conversion.updatedAt || Date.now()}"`);
+        
+        // Set proper headers for image serving
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Content-Type', conversion.thumbnailMimeType || 'image/jpeg');
+        res.setHeader('Content-Length', conversion.thumbnailData.length);
+
+        // Serve the thumbnail data
+        res.send(conversion.thumbnailData);
 
     } catch (error) {
-        console.error('Video thumbnail error:', error);
-        res.status(500).json({ message: 'Server error generating video thumbnail' });
+        console.error('❌ Video thumbnail error:', error);
+        res.status(500).json({ message: 'Server error serving video thumbnail' });
     }
 });
 

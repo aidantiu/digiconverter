@@ -7,6 +7,7 @@ import { MiniProgressBar } from '../components/ProgressBar';
 import Navbar from '../components/Navbar';
 import SessionExpiredModal from '../components/SessionExpiredModal';
 import { ThumbnailWithSpinner } from '../components/ImageWithSpinner';
+import { preloadImages } from '../utils/cache';
 
 const HistoryPage = () => {
     const [history, setHistory] = useState({ images: [], videos: [] });
@@ -76,6 +77,28 @@ const HistoryPage = () => {
 
             const data = await response.json();
             setHistory(data);
+            
+            // Preload thumbnails for better UX
+            const thumbnailUrls = [];
+            ['images', 'videos'].forEach(category => {
+                if (data[category]) {
+                    data[category].forEach(conversion => {
+                        if (conversion.status === 'completed') {
+                            const thumbnailUrl = category === 'images' 
+                                ? API_ENDPOINTS.thumbnailImage(conversion._id)
+                                : API_ENDPOINTS.thumbnailVideo(conversion._id);
+                            thumbnailUrls.push(thumbnailUrl);
+                        }
+                    });
+                }
+            });
+            
+            // Preload thumbnails in the background
+            if (thumbnailUrls.length > 0) {
+                preloadImages(thumbnailUrls).catch(error => {
+                    console.warn('Some thumbnails failed to preload:', error);
+                });
+            }
         } catch (error) {
             console.error('Error fetching history:', error);
             setError(error.message);
