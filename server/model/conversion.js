@@ -23,6 +23,33 @@ const conversionSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // Store original file data in database
+    originalFileData: {
+        type: Buffer,
+        required: true
+    },
+    originalMimeType: {
+        type: String,
+        required: true
+    },
+    // Store converted file data in database
+    convertedFileData: {
+        type: Buffer,
+        required: false
+    },
+    convertedMimeType: {
+        type: String,
+        required: false
+    },
+    // Store thumbnail data for videos/images
+    thumbnailData: {
+        type: Buffer,
+        required: false
+    },
+    thumbnailMimeType: {
+        type: String,
+        default: 'image/jpeg'
+    },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -36,6 +63,12 @@ const conversionSchema = new mongoose.Schema({
         type: String,
         enum: ['processing', 'completed', 'failed'],
         default: 'processing'
+    },
+    progress: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
     },
     downloadCount: {
         type: Number,

@@ -1,19 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { authUtils } from '../utils/auth';
+import { PageLoader, CardLoader } from '../components/Loader';
+import { MiniProgressBar } from '../components/ProgressBar';
+import Navbar from '../components/Navbar';
+import SessionExpiredModal from '../components/SessionExpiredModal';
+import { ThumbnailWithSpinner } from '../components/ImageWithSpinner';
+import { preloadImages } from '../utils/cache';
 
 const HistoryPage = () => {
     const [history, setHistory] = useState({ images: [], videos: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showSessionExpired, setShowSessionExpired] = useState(false);
 
     useEffect(() => {
         fetchCategorizedHistory();
+
+        // Listen for conversion completion events
+        const handleConversionCompleted = (event) => {
+            console.log('🔄 Conversion completed, refreshing history...', event.detail);
+            // Add a small delay to ensure the backend has processed the completion
+            setTimeout(() => {
+                fetchCategorizedHistory();
+            }, 1000);
+        };
+
+        // Listen for localStorage changes (for cross-tab updates)
+        const handleStorageChange = (event) => {
+            if (event.key === 'lastConversionCompleted') {
+                console.log('🔄 Detected conversion completion in another tab, refreshing...');
+                setTimeout(() => {
+                    fetchCategorizedHistory();
+                }, 1000);
+            }
+        };
+
+        window.addEventListener('conversionCompleted', handleConversionCompleted);
+        window.addEventListener('storage', handleStorageChange);
+
+        // Cleanup listeners
+        return () => {
+            window.removeEventListener('conversionCompleted', handleConversionCompleted);
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, []);
 
     const fetchCategorizedHistory = async () => {
         try {
-            const token = localStorage.getItem('authToken');
+            // Check if user appears to be logged in and validate if so
+            if (authUtils.isLoggedIn()) {
+                const validation = await authUtils.validateForAction();
+                if (!validation.valid && validation.expired) {
+                    setShowSessionExpired(true);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const token = authUtils.getToken();
             const response = await fetch(`${API_ENDPOINTS.history}/categorized`, {
                 headers: {
                     'Authorization': token ? `Bearer ${token}` : ''
@@ -21,11 +67,38 @@ const HistoryPage = () => {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    // Unauthorized - session might have expired
+                    setShowSessionExpired(true);
+                    return;
+                }
                 throw new Error('Failed to fetch history');
             }
 
             const data = await response.json();
             setHistory(data);
+            
+            // Preload thumbnails for better UX
+            const thumbnailUrls = [];
+            ['images', 'videos'].forEach(category => {
+                if (data[category]) {
+                    data[category].forEach(conversion => {
+                        if (conversion.status === 'completed') {
+                            const thumbnailUrl = category === 'images' 
+                                ? API_ENDPOINTS.thumbnailImage(conversion._id)
+                                : API_ENDPOINTS.thumbnailVideo(conversion._id);
+                            thumbnailUrls.push(thumbnailUrl);
+                        }
+                    });
+                }
+            });
+            
+            // Preload thumbnails in the background
+            if (thumbnailUrls.length > 0) {
+                preloadImages(thumbnailUrls).catch(error => {
+                    console.warn('Some thumbnails failed to preload:', error);
+                });
+            }
         } catch (error) {
             console.error('Error fetching history:', error);
             setError(error.message);
@@ -58,58 +131,70 @@ const HistoryPage = () => {
 
     const ConversionCard = ({ conversion, type }) => {
         const [thumbnailError, setThumbnailError] = useState(false);
-        const [thumbnailLoading, setThumbnailLoading] = useState(true);
+        const [thumbnailUrl, setThumbnailUrl] = useState(null);
 
-        const getThumbnailUrl = () => {
-            if (conversion.status !== 'completed' || !conversion.convertedFileName) {
-                return null;
-            }
-            
-            if (type === 'image') {
-                return API_ENDPOINTS.thumbnailImage(conversion._id);
-            } else {
-                return API_ENDPOINTS.thumbnailVideo(conversion._id);
-            }
-        };
+        // Fetch thumbnail when component mounts
+        useEffect(() => {
+            const fetchThumbnail = async () => {
+                if (conversion.status !== 'completed' || !conversion.convertedFileName) {
+                    return;
+                }
 
-        const handleThumbnailLoad = () => {
-            setThumbnailLoading(false);
-        };
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const apiUrl = type === 'image' 
+                        ? API_ENDPOINTS.thumbnailImage(conversion._id)
+                        : API_ENDPOINTS.thumbnailVideo(conversion._id);
+
+                    const response = await fetch(apiUrl, {
+                        headers: {
+                            'Authorization': token ? `Bearer ${token}` : ''
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch thumbnail: ${response.status}`);
+                    }
+
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    setThumbnailUrl(url);
+                } catch (error) {
+                    console.warn('Thumbnail loading failed:', error);
+                    setThumbnailError(true);
+                }
+            };
+
+            fetchThumbnail();
+        }, [conversion._id, conversion.status, type, conversion.convertedFileName]);
+
+        // Cleanup object URL when component unmounts or when thumbnailUrl changes
+        useEffect(() => {
+            return () => {
+                if (thumbnailUrl) {
+                    URL.revokeObjectURL(thumbnailUrl);
+                }
+            };
+        }, [thumbnailUrl]);
 
         const handleThumbnailError = (error) => {
             setThumbnailError(true);
-            setThumbnailLoading(false);
-            console.warn('Thumbnail loading failed:', error);
+            console.warn('Thumbnail display failed:', error);
         };
-
-        const thumbnailUrl = getThumbnailUrl();
 
         return (
             <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 {/* Thumbnail/Icon Section */}
                 <div className="h-48 bg-gradient-to-br from-purple-100 to-pink-100 relative overflow-hidden flex items-center justify-center">
                     {thumbnailUrl && !thumbnailError && conversion.status === 'completed' ? (
-                        <div className="relative w-full h-full">
-                            {thumbnailLoading && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                                </div>
-                            )}
-                            <img
-                                src={thumbnailUrl}
-                                alt={conversion.originalFileName}
-                                className="w-full h-full object-cover"
-                                onLoad={handleThumbnailLoad}
-                                onError={handleThumbnailError}
-                            />
-                            {type === 'video' && !thumbnailLoading && !thumbnailError && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="bg-black bg-opacity-50 rounded-full p-3">
-                                        <div className="text-white text-2xl">▶️</div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <ThumbnailWithSpinner
+                            src={thumbnailUrl}
+                            alt={conversion.originalFileName}
+                            size="large"
+                            className="w-full h-full object-cover"
+                            containerClassName="w-full h-full"
+                            onError={handleThumbnailError}
+                        />
                     ) : (
                         <div className="text-center">
                             <div className="text-6xl mb-2">
@@ -128,16 +213,38 @@ const HistoryPage = () => {
 
                     {/* Status Badge */}
                     <div className="absolute top-3 right-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             conversion.status === 'completed' 
-                                ? 'bg-green-100 text-green-800' 
+                                ? 'bg-green-100 text-green-600' 
                                 : conversion.status === 'processing'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
+                                ? 'bg-yellow-100 text-yellow-600'
+                                : 'bg-red-100 text-red-600'
                         }`}>
-                            {conversion.status}
-                        </span>
+                            {conversion.status === 'completed' ? (
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                            ) : conversion.status === 'processing' ? (
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                </svg>
+                            ) : (
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                            )}
+                        </div>
                     </div>
+                    
+                    {/* Progress bar for processing conversions */}
+                    {conversion.status === 'processing' && (
+                        <div className="absolute bottom-0 left-0 right-0">
+                            <MiniProgressBar 
+                                progress={conversion.progress || 0} 
+                                status={conversion.status} 
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Content Section */}
@@ -170,32 +277,13 @@ const HistoryPage = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading your conversion history...</p>
-                </div>
-            </div>
-        );
+        return <PageLoader message="Loading your conversion history..." />;
     }
 
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <header className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <h1 className="text-2xl font-bold text-gray-900">DigiConverter</h1>
-                        <nav className="flex space-x-8">
-                            <Link to="/" className="text-gray-600 hover:text-purple-600 font-medium transition-colors">Home</Link>
-                            <Link to="/upload" className="text-gray-600 hover:text-purple-600 font-medium transition-colors">Upload</Link>
-                            <Link to="/history" className="text-purple-600 font-semibold">History</Link>
-                            <Link to="/login" className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium transition-colors">Login</Link>
-                        </nav>
-                    </div>
-                </div>
-            </header>
+            <Navbar />
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -217,7 +305,7 @@ const HistoryPage = () => {
                             <span className="mr-2">🖼️</span>
                             Images
                             <span className="ml-2 text-sm font-normal text-gray-500">
-                                ({history.images.length}/5)
+                                ({history.images.length})
                             </span>
                         </h2>
                     </div>
@@ -253,7 +341,7 @@ const HistoryPage = () => {
                             <span className="mr-2">🎥</span>
                             Videos
                             <span className="ml-2 text-sm font-normal text-gray-500">
-                                ({history.videos.length}/5)
+                                ({history.videos.length})
                             </span>
                         </h2>
                     </div>
@@ -281,6 +369,12 @@ const HistoryPage = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Session Expired Modal */}
+                <SessionExpiredModal 
+                    isOpen={showSessionExpired} 
+                    onClose={() => setShowSessionExpired(false)} 
+                />
             </main>
         </div>
     );

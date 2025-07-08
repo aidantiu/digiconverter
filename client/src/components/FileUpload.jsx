@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { authUtils } from '../utils/auth';
+import Loader, { DotsLoader } from './Loader';
+import ProgressBar, { CircularProgress } from './ProgressBar';
+import SessionExpiredModal from './SessionExpiredModal';
+import ImageWithSpinner from './ImageWithSpinner';
 
 // Debug function - add to window for manual cleanup
 if (typeof window !== 'undefined') {
     window.clearDigiConverterData = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('authToken');
+        localStorage.removeItem('justLoggedIn');
         console.log('DigiConverter localStorage data cleared');
         window.location.reload();
     };
@@ -22,27 +28,28 @@ const FileUpload = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [filePreview, setFilePreview] = useState(null);
     const [previewType, setPreviewType] = useState(null);
+    const [conversionProgress, setConversionProgress] = useState(0);
+    const [isConverting, setIsConverting] = useState(false);
+    const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
+    const [showSessionExpired, setShowSessionExpired] = useState(false);
 
     // Check upload limits on component mount
     useEffect(() => {
-        // Clean up any corrupted localStorage data on mount and set user state
-        try {
-            const userString = localStorage.getItem('user');
-            const token = localStorage.getItem('authToken');
+        // Use quick auth status - no server validation on page load
+        const authStatus = authUtils.getQuickAuthStatus();
+        
+        if (authStatus.authenticated) {
+            setUser(authStatus.user);
+            setIsLoggedIn(true);
             
-            // More robust checking for valid user data
-            if (userString && userString.trim() !== '' && userString !== 'undefined' && userString !== 'null') {
-                const parsedUser = JSON.parse(userString);
-                setUser(parsedUser);
-            } else {
-                setUser(null);
+            // Show welcome message only if user just logged in
+            const justLoggedIn = localStorage.getItem('justLoggedIn');
+            if (justLoggedIn === 'true') {
+                setShowWelcomeMessage(true);
+                // Clear the flag so it doesn't show again
+                localStorage.removeItem('justLoggedIn');
             }
-            
-            setIsLoggedIn(!!token && token !== 'undefined' && token !== 'null');
-        } catch (error) {
-            console.warn('Cleaning up corrupted localStorage data:', error);
-            localStorage.removeItem('user');
-            localStorage.removeItem('authToken');
+        } else {
             setUser(null);
             setIsLoggedIn(false);
         }
@@ -52,7 +59,7 @@ const FileUpload = () => {
 
     const checkUploadLimits = async () => {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = authUtils.getToken();
             const response = await fetch(API_ENDPOINTS.limits, {
                 headers: {
                     'Authorization': token ? `Bearer ${token}` : ''
@@ -186,13 +193,34 @@ const FileUpload = () => {
             return;
         }
 
+        // If user appears logged in, validate session before uploading
+        if (isLoggedIn) {
+            const validation = await authUtils.validateForAction();
+            if (!validation.valid) {
+                if (validation.expired) {
+                    // Show session expired modal
+                    setShowSessionExpired(true);
+                    setUser(null);
+                    setIsLoggedIn(false);
+                    return;
+                } else {
+                    // Other validation error, clear auth silently
+                    authUtils.clearAuth();
+                    setUser(null);
+                    setIsLoggedIn(false);
+                    // Refresh upload limits for anonymous user
+                    checkUploadLimits();
+                }
+            }
+        }
+
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('targetFormat', targetFormat);
 
         try {
-            const token = localStorage.getItem('authToken');
+            const token = authUtils.getToken();
             const response = await fetch(API_ENDPOINTS.upload, {
                 method: 'POST',
                 headers: {
@@ -222,6 +250,8 @@ const FileUpload = () => {
                 checkUploadLimits();
                 // Poll for status updates
                 pollConversionStatus(data.conversionId);
+                setIsConverting(true);
+                setConversionProgress(0);
             } else {
                 alert(data.message || 'Upload failed');
             }
@@ -254,8 +284,25 @@ const FileUpload = () => {
                 const data = await response.json();
                 setConversionStatus(data);
                 
+                // Update progress
+                if (data.progress !== undefined) {
+                    setConversionProgress(data.progress);
+                }
+                
                 if (data.status === 'processing') {
                     setTimeout(poll, 2000); // Poll every 2 seconds
+                } else {
+                    // Conversion finished (completed or failed)
+                    setIsConverting(false);
+                    if (data.status === 'completed') {
+                        setConversionProgress(100);
+                        // Notify other components that a new conversion completed
+                        window.dispatchEvent(new CustomEvent('conversionCompleted', {
+                            detail: { conversionId: conversionId, status: data.status }
+                        }));
+                        // Also update localStorage timestamp for history refresh
+                        localStorage.setItem('lastConversionCompleted', Date.now().toString());
+                    }
                 }
             } catch (error) {
                 console.error('Status check error:', error);
@@ -272,10 +319,11 @@ const FileUpload = () => {
     };
 
     const getImageFormats = () => ['jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff'];
-    const getVideoFormats = () => ['mp4', 'avi', 'mov', 'wmv', 'webm', 'mkv'];
+    const getVideoFormats = () => ['mp4', 'avi', 'mov', 'wmv', 'webm', 'mkv', 'flv', 'mpeg', 'mpg', 'm4v'];
 
+    // Check if the file is an image or video based on its extension
     const isImageFile = file && /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i.test(file.name);
-    const isVideoFile = file && /\.(mp4|avi|mov|wmv|flv|mkv|webm)$/i.test(file.name);
+    const isVideoFile = file && /\.(mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg|m4v|3gp)$/i.test(file.name);
     
     // Function to safely get stored user (utility function)
     const getStoredUser = () => {
@@ -309,10 +357,9 @@ const FileUpload = () => {
 
     return (
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">File Converter</h2>
-            
+
             {/* Authentication Status */}
-            {isLoggedIn ? (
+            {isLoggedIn && showWelcomeMessage && (
                 <div className="bg-gradient-to-r from-green-100 to-green-50 border-2 border-green-200 rounded-xl p-6 mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <span className="text-gray-800 text-lg">👋 Welcome back, <strong>{user?.username}</strong>!</span>
@@ -321,7 +368,9 @@ const FileUpload = () => {
                         </div>
                     </div>
                 </div>
-            ) : (
+            )}
+            
+            {!isLoggedIn && (
                 <div className="bg-gradient-to-r from-orange-100 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <span className="text-orange-800 text-lg">🎯 You're using anonymous mode</span>
@@ -342,15 +391,10 @@ const FileUpload = () => {
                             : ` (Resets at ${new Date(uploadLimits.resetTime).toLocaleString()})`
                         }
                     </p>
-                    {!uploadLimits.canUpload && (
-                        <p>
-                            <strong>Want unlimited uploads? <Link to="/login" className="text-purple-600 hover:text-purple-800 underline">Login now!</Link></strong>
-                        </p>
-                    )}
                 </div>
             )}
 
-            {uploadLimits && uploadLimits.unlimited && (
+            {uploadLimits && uploadLimits.unlimited && showWelcomeMessage && (
                 <div className="bg-gradient-to-r from-teal-100 to-cyan-50 border-2 border-teal-200 rounded-lg p-4 mb-6 text-center text-teal-800">
                     <p>🚀 <strong>Unlimited uploads active!</strong> Convert as many files as you need.</p>
                 </div>
@@ -358,115 +402,135 @@ const FileUpload = () => {
 
             {/* File Upload */}
             <div className="space-y-6">
-                {/* File Selection and Preview Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* File Input Section */}
-                    <div>
-                        <label htmlFor="file" className="block text-lg font-semibold text-gray-900 mb-4">
-                            📁 Select File to Convert
-                        </label>
-                        <input
-                            type="file"
-                            id="file"
-                            onChange={handleFileChange}
-                            accept="image/*,video/*"
-                            disabled={isUploading}
-                            className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                        />
+                {/* File Input Section */}
+                <div>
+                    {!file && (
+                        <>
+                            <label htmlFor="file" className="block text-lg font-semibold text-gray-900 mb-4">
+                                📁 Select File to Convert
+                            </label>
+                            <input
+                                type="file"
+                                id="file"
+                                onChange={handleFileChange}
+                                accept="image/*,video/*"
+                                disabled={isUploading}
+                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                            />
+                        </>
+                    )}
+                    
+                    {/* Hidden file input for changing files */}
+                    <input
+                        type="file"
+                        id="hidden-file"
+                        onChange={handleFileChange}
+                        accept="image/*,video/*"
+                        disabled={isUploading}
+                        className="hidden"
+                    />
                         
                         {file && (
-                            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="flex items-center space-x-3">
-                                    <div className="text-2xl">
-                                        {file.type.startsWith('image/') ? '🖼️' : '🎥'}
-                                    </div>
-                                    <div className="flex-1">
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 relative">
+                                {/* Change File Button - Overlay */}
+                                <button
+                                    onClick={() => {
+                                        document.getElementById('hidden-file').click();
+                                    }}
+                                    disabled={isUploading}
+                                    className="absolute top-2 right-2 z-10 px-2 py-1 text-xs bg-white hover:bg-gray-50 text-gray-600 rounded-md transition-colors disabled:opacity-50 shadow-sm border border-gray-200"
+                                >
+                                    Change
+                                </button>
+                                
+                                <div className="flex items-start space-x-3">
+                                    <div className="flex-1 min-w-0">
                                         <p className="font-medium text-gray-900 truncate">{file.name}</p>
-                                        <p className="text-sm text-gray-600">
+                                        <p className="text-sm text-gray-600 mb-3">
                                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                                         </p>
+                                        
+                                        {/* Thumbnail inside file info */}
+                                        {filePreview ? (
+                                            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto my-2 rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative bg-white">
+                                                <ImageWithSpinner
+                                                    src={filePreview}
+                                                    alt="File thumbnail"
+                                                    className="w-full h-auto object-cover"
+                                                    spinnerSize="medium"
+                                                />
+                                            </div>
+                                        ) : file && previewType === 'video' ? (
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg border-2 border-gray-300 bg-gray-100 flex items-center justify-center mx-auto">
+                                                <DotsLoader message="" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center mx-auto">
+                                                <span className="text-gray-400 text-xs text-center">No<br/>Preview</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
-                    </div>
-
-                    {/* File Preview Section */}
-                    <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center min-h-[200px]">
-                        {filePreview ? (
-                            <div className="text-center p-4">
-                                {/* Thumbnail Preview */}
-                                <div className="mx-auto mb-3 w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative">
-                                    <img
-                                        src={filePreview}
-                                        alt="File thumbnail"
-                                        className="w-full h-full object-cover"
-                                    />
-                                    {/* Video overlay indicator */}
-                                    {previewType === 'video' && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
-                                            <span className="text-white text-lg">▶️</span>
-                                        </div>
-                                    )}
-                                </div>
-                                {/* File Info */}
-                                <p className="text-sm font-medium text-gray-700 truncate">{file?.name}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {file && (file.size / (1024 * 1024)).toFixed(2)} MB • {previewType === 'video' ? 'video thumbnail' : previewType || 'file'}
-                                </p>
-                            </div>
-                        ) : file && previewType === 'video' ? (
-                            <div className="text-center p-4">
-                                {/* Loading state for video thumbnail generation */}
-                                <div className="mx-auto mb-3 w-20 h-20 rounded-lg border-2 border-gray-300 shadow-sm bg-gray-200 flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                                </div>
-                                <p className="text-sm font-medium text-gray-700">Generating thumbnail...</p>
-                                <p className="text-xs text-gray-500 mt-1">Please wait</p>
-                            </div>
-                        ) : (
-                            <div className="text-center p-8">
-                                <div className="text-4xl mb-2">📄</div>
-                                <p className="text-gray-600">File thumbnail will appear here</p>
-                                <p className="text-sm text-gray-500 mt-1">Select a file to see thumbnail</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
                 
                 {file && (
-                    <div className="space-y-2">
-                        <label className="block text-lg font-semibold text-gray-700">🔄 Convert to:</label>
-                        <select
-                            value={targetFormat}
-                            onChange={(e) => setTargetFormat(e.target.value)}
-                            disabled={isUploading}
-                            className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 disabled:opacity-50"
-                        >
-                            <option value="">Select format</option>
-                            {isImageFile && getImageFormats().map(format => (
-                                <option key={format} value={format}>{format.toUpperCase()}</option>
-                            ))}
-                            {isVideoFile && getVideoFormats().map(format => (
-                                <option key={format} value={format}>{format.toUpperCase()}</option>
-                            ))}
-                        </select>
+                    <div className="space-y-4 mt-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
+                            <label className="text-lg font-semibold text-gray-700 sm:whitespace-nowrap">🔄 Convert to:</label>
+                            <select
+                                value={targetFormat}
+                                onChange={(e) => setTargetFormat(e.target.value)}
+                                disabled={isUploading}
+                                className="flex-1 p-3 border border-gray-300 rounded-lg bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 disabled:opacity-50"
+                            >
+                                <option value="">Select format</option>
+                                {isImageFile && getImageFormats().map(format => (
+                                    <option key={format} value={format}>{format.toUpperCase()}</option>
+                                ))}
+                                {isVideoFile && getVideoFormats().map(format => (
+                                    <option key={format} value={format}>{format.toUpperCase()}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 )}
 
                 <button
                     onClick={handleUpload}
                     disabled={!file || !targetFormat || isUploading || (uploadLimits && !uploadLimits.canUpload && !uploadLimits.unlimited)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg flex items-center justify-center mt-6 text-center"
                 >
-                    {isUploading ? '🔄 Uploading...' : '🚀 Convert File'}
+                    {isUploading ? (
+                        <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Uploading...
+                        </div>
+                    ) : (
+                        '🚀 Convert File'
+                    )}
                 </button>
+                </div>
             </div>
 
             {/* Conversion Status */}
             {conversionStatus && (
                 <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Conversion Status</h3>
+                    
+                    {/* Progress Bar */}
+                    {isConverting && (
+                        <div className="mb-6">
+                            <ProgressBar 
+                                progress={conversionProgress}
+                                status={conversionStatus.status}
+                                showPercentage={true}
+                                height="h-3"
+                                animated={true}
+                            />
+                        </div>
+                    )}
+                    
                     <p className="mb-4">
                         Status: <span className={`font-semibold ${
                             conversionStatus.status === 'processing' ? 'text-orange-600' :
@@ -521,6 +585,20 @@ const FileUpload = () => {
                     )}
                 </div>
             )}
+
+            {/* Session Expired Modal */}
+            <SessionExpiredModal
+                isOpen={showSessionExpired}
+                onClose={() => {
+                    setShowSessionExpired(false);
+                    // Refresh upload limits for anonymous user
+                    checkUploadLimits();
+                }}
+                onLogin={() => {
+                    // Optional callback for when user clicks login
+                    localStorage.setItem('returnToUpload', 'true');
+                }}
+            />
         </div>
     );
 };

@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
     // Authentication
     register: `${API_BASE_URL}/api/auth/register`,
     login: `${API_BASE_URL}/api/auth/login`,
+    validate: `${API_BASE_URL}/api/auth/validate`,
     
     // File conversion
     upload: `${API_BASE_URL}/api/conversions/upload`,
