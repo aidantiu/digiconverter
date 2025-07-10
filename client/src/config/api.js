@@ -1,23 +1,22 @@
-// API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
+// API configuration for a file conversion service
 export const API_ENDPOINTS = {
     // Authentication
-    register: `${API_BASE_URL}/api/auth/register`,
-    login: `${API_BASE_URL}/api/auth/login`,
-    validate: `${API_BASE_URL}/api/auth/validate`,
+    register: `${baseURL}/api/auth/register`,
+    login: `${baseURL}/api/auth/login`,
+    validate: `${baseURL}/api/auth/validate`,
     
     // File conversion
-    upload: `${API_BASE_URL}/api/conversions/upload`,
-    limits: `${API_BASE_URL}/api/conversions/limits`,
-    status: (id) => `${API_BASE_URL}/api/conversions/status/${id}`,
-    download: (id) => `${API_BASE_URL}/api/conversions/download/${id}`,
-    history: `${API_BASE_URL}/api/conversions/history`,
-    preview: (id) => `${API_BASE_URL}/api/conversions/preview/${id}`,
+    upload: `${baseURL}/api/conversions/upload`,
+    batchUpload: `${baseURL}/api/conversions/batch-upload`,
+    limits: `${baseURL}/api/conversions/limits`,
+    status: (id) => `${baseURL}/api/conversions/status/${id}`,
+    batchStatus: (batchId) => `${baseURL}/api/conversions/batch-status/${batchId}`,
+    download: (id) => `${baseURL}/api/conversions/download/${id}`,
+    history: `${baseURL}/api/conversions/history`,
+    preview: (id) => `${baseURL}/api/conversions/preview/${id}`,
     
     // Thumbnails
-    thumbnailImage: (id) => `${API_BASE_URL}/api/conversions/thumbnail/image/${id}`,
-    thumbnailVideo: (id) => `${API_BASE_URL}/api/conversions/thumbnail/video/${id}`,
+    thumbnailImage: (id) => `${baseURL}/api/conversions/thumbnail/image/${id}`,
+    thumbnailVideo: (id) => `${baseURL}/api/conversions/thumbnail/video/${id}`,
 };
 
-export default API_BASE_URL;
