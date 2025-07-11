@@ -1,4 +1,6 @@
-// API configuration for a file conversion service
+// API configuration
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export const API_ENDPOINTS = {
     // Authentication
     register: `${baseURL}/api/auth/register`,
@@ -19,4 +21,6 @@ export const API_ENDPOINTS = {
     thumbnailImage: (id) => `${baseURL}/api/conversions/thumbnail/image/${id}`,
     thumbnailVideo: (id) => `${baseURL}/api/conversions/thumbnail/video/${id}`,
 };
+
+export default baseURL;
 
