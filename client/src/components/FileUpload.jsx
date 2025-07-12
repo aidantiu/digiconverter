@@ -6,6 +6,7 @@ import Loader, { DotsLoader } from './Loader';
 import ProgressBar, { CircularProgress } from './ProgressBar';
 import SessionExpiredModal from './SessionExpiredModal';
 import ImageWithSpinner from './ImageWithSpinner';
+import UnsupportedFileModal from './UnsupportedFileModal';
 
 // Debug function - add to window for manual cleanup
 if (typeof window !== 'undefined') {
@@ -32,6 +33,8 @@ const FileUpload = () => {
     const [isConverting, setIsConverting] = useState(false);
     const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
     const [showSessionExpired, setShowSessionExpired] = useState(false);
+    const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
+    const [unsupportedFileInfo, setUnsupportedFileInfo] = useState({ fileName: '', detectedType: '' });
 
     // Check upload limits on component mount
     useEffect(() => {
@@ -110,23 +113,46 @@ const FileUpload = () => {
 
     const handleFileChange = (event) => {
         const selectedFile = event.target.files[0];
+        
+        if (!selectedFile) {
+            setFile(null);
+            setFilePreview(null);
+            setPreviewType(null);
+            return;
+        }
+
+        // Validate file type
+        const validation = validateFileType(selectedFile);
+        
+        if (!validation.isValid) {
+            // Show unsupported file modal
+            setUnsupportedFileInfo({
+                fileName: selectedFile.name,
+                detectedType: validation.type
+            });
+            setShowUnsupportedModal(true);
+            
+            // Clear the file input
+            event.target.value = '';
+            setFile(null);
+            setFilePreview(null);
+            setPreviewType(null);
+            return;
+        }
+
+        // File is valid, proceed with setting it
         setFile(selectedFile);
 
-        // Preview functionality
-        if (selectedFile) {
-            if (selectedFile.type.startsWith('image/')) {
-                // For images, use direct file URL
-                const objectUrl = URL.createObjectURL(selectedFile);
-                setFilePreview(objectUrl);
-                setPreviewType('image');
-            } else if (selectedFile.type.startsWith('video/')) {
-                // For videos, generate a thumbnail
-                generateVideoThumbnail(selectedFile);
-                setPreviewType('video');
-            } else {
-                setFilePreview(null);
-                setPreviewType(null);
-            }
+        // Preview functionality for valid files
+        if (selectedFile.type.startsWith('image/')) {
+            // For images, use direct file URL
+            const objectUrl = URL.createObjectURL(selectedFile);
+            setFilePreview(objectUrl);
+            setPreviewType('image');
+        } else if (selectedFile.type.startsWith('video/')) {
+            // For videos, generate a thumbnail
+            generateVideoThumbnail(selectedFile);
+            setPreviewType('video');
         } else {
             setFilePreview(null);
             setPreviewType(null);
@@ -338,6 +364,41 @@ const FileUpload = () => {
     // Check if the file is an image or video based on its extension
     const isImageFile = file && /\.(jpg|jpeg|png|webp)$/i.test(file.name);
     const isVideoFile = file && /\.(mp4|mov|webm|mpeg|mpg)$/i.test(file.name);
+
+    // Function to validate file type and show appropriate modal
+    const validateFileType = (selectedFile) => {
+        const fileName = selectedFile.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        // Check for supported image formats
+        const supportedImageFormats = ['jpg', 'jpeg', 'png', 'webp'];
+        const supportedVideoFormats = ['mp4', 'mov', 'webm', 'mpeg', 'mpg'];
+        
+        // Check if it's a supported image
+        if (supportedImageFormats.includes(fileExtension)) {
+            return { isValid: true, type: 'image' };
+        }
+        
+        // Check if it's a supported video
+        if (supportedVideoFormats.includes(fileExtension)) {
+            return { isValid: true, type: 'video' };
+        }
+        
+        // Check if it's an unsupported image format
+        const unsupportedImageFormats = ['gif', 'bmp', 'tiff', 'svg', 'ico', 'tga'];
+        if (unsupportedImageFormats.includes(fileExtension) || selectedFile.type.startsWith('image/')) {
+            return { isValid: false, type: 'unsupported-image' };
+        }
+        
+        // Check if it's an unsupported video format
+        const unsupportedVideoFormats = ['avi', 'wmv', 'flv', 'mkv', 'm4v', '3gp', 'asf'];
+        if (unsupportedVideoFormats.includes(fileExtension) || selectedFile.type.startsWith('video/')) {
+            return { isValid: false, type: 'unsupported-video' };
+        }
+        
+        // Unknown file type
+        return { isValid: false, type: 'unknown' };
+    };
     
     // Function to safely get stored user (utility function)
     const getStoredUser = () => {
@@ -427,10 +488,14 @@ const FileUpload = () => {
                                 type="file"
                                 id="file"
                                 onChange={handleFileChange}
-                                accept="image/*,video/*"
+                                accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
                                 disabled={isUploading}
                                 className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
                             />
+                            <div className="mt-2 text-sm text-gray-600 text-center">
+                                <p><strong>Supported formats:</strong></p>
+                                <p>📸 Images: JPEG, PNG, WebP | 🎬 Videos: MP4, MOV, WebM, MPG</p>
+                            </div>
                         </>
                     )}
                     
@@ -439,7 +504,7 @@ const FileUpload = () => {
                         type="file"
                         id="hidden-file"
                         onChange={handleFileChange}
-                        accept="image/*,video/*"
+                        accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
                         disabled={isUploading}
                         className="hidden"
                     />
@@ -612,6 +677,17 @@ const FileUpload = () => {
                     // Optional callback for when user clicks login
                     localStorage.setItem('returnToUpload', 'true');
                 }}
+            />
+
+            {/* Unsupported File Modal */}
+            <UnsupportedFileModal
+                isOpen={showUnsupportedModal}
+                onClose={() => {
+                    setShowUnsupportedModal(false);
+                    setUnsupportedFileInfo({ fileName: '', detectedType: '' });
+                }}
+                fileName={unsupportedFileInfo.fileName}
+                detectedType={unsupportedFileInfo.detectedType}
             />
         </div>
     );
