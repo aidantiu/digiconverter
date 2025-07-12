@@ -78,10 +78,6 @@ const conversionSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    expiresAt: {
-        type: Date,
-        default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from creation
-    }
 });
 
 // Index for efficient queries

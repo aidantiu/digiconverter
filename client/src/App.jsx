@@ -6,7 +6,7 @@ import HistoryPage from './pages/HistoryPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
-import './App.css';
+import './styles/App.css';
 
 function App() {
   return (
