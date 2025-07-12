@@ -12,7 +12,7 @@ const HomePage = () => {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
                 <div className="text-center">
                     <h1 className="text-5xl font-bold text-gray-900 mb-6">Convert Your Files Instantly</h1>
-                    <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">Transform images and videos to any format you need. Fast, secure, and free for everyone.</p>
+                    <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">Transform images to JPEG, PNG, or WebP and videos to MP4, MOV, WebM, or MPG. Fast, secure, and free for everyone.</p>
                     
                     <div className="flex justify-center space-x-4 mb-16">
                         <Link to="/upload" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 transform hover:-translate-y-1 shadow-lg">
@@ -33,7 +33,7 @@ const HomePage = () => {
                             <span className="text-gray-600">Unlimited for members</span>
                         </div>
                         <div className="text-center">
-                            <span className="text-4xl font-bold text-purple-600 block">12+</span>
+                            <span className="text-4xl font-bold text-purple-600 block">7</span>
                             <span className="text-gray-600">Supported formats</span>
                         </div>
                     </div>

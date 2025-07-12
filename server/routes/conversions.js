@@ -20,17 +20,16 @@ const upload = multer({
 
     // File filter to allow only specific file types
     fileFilter: (req, file, cb) => {
-        // Allow common image and video formats
-        const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|bmp|tiff|mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg)$/i;
+        // Allow only JPEG, PNG, WEBP images and MP4, MOV, WEBM, MPG videos
+        const allowedExtensions = /\.(jpeg|jpg|png|webp|mp4|mov|webm|mpeg|mpg)$/i;
         const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
         
-        // Common MIME types for images and videos
+        // MIME types for supported formats only
         const allowedMimeTypes = [
-            // Image MIME types
-            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
-            // Video MIME types
-            'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 
-            'video/x-flv', 'video/x-matroska', 'video/webm', 'video/3gpp', 'video/x-ms-asf',
+            // Image MIME types (only JPEG, PNG, WebP)
+            'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+            // Video MIME types (only MP4, MOV, WEBM, MPG)
+            'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
             // Additional common MIME types for MOV files
             'application/octet-stream'
         ];
@@ -43,7 +42,7 @@ const upload = multer({
             return cb(null, true);
         } else {
             console.log(`❌ File rejected: ${file.originalname} (${file.mimetype})`);
-            cb(new Error('Only image and video files are allowed. Supported formats: JPEG, PNG, GIF, WebP, BMP, TIFF, MP4, AVI, MOV, WMV, FLV, MKV, WebM, MPEG, MPG'));
+            cb(new Error('Only supported image and video files are allowed. Supported image formats: JPEG, PNG, WebP. Supported video formats: MP4, MOV, WebM, MPG'));
         }
     }
 });
@@ -63,8 +62,34 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
             return res.status(400).json({ message: 'Target format is required' });
         }
 
-        // Validate target format
+        // Validate target format and file type compatibility
         const originalFormat = path.extname(req.file.originalname).slice(1).toLowerCase();
+        const imageFormats = ['jpeg', 'jpg', 'png', 'webp']; // Only supported image formats
+        const videoFormats = ['mp4', 'mov', 'webm', 'mpeg', 'mpg'];
+        
+        const isImageFile = imageFormats.includes(originalFormat);
+        const isVideoFile = videoFormats.includes(originalFormat);
+        const targetIsImage = imageFormats.includes(targetFormat.toLowerCase());
+        const targetIsVideo = videoFormats.includes(targetFormat.toLowerCase());
+        
+        // Validate format compatibility
+        if (isImageFile && !targetIsImage) {
+            return res.status(400).json({ 
+                message: 'Invalid conversion: Images can only be converted to supported image formats (JPEG, PNG, WebP)' 
+            });
+        }
+        
+        if (isVideoFile && !targetIsVideo) {
+            return res.status(400).json({ 
+                message: 'Invalid conversion: Videos can only be converted to supported video formats (MP4, MOV, WebM, MPG)' 
+            });
+        }
+        
+        if (!isImageFile && !isVideoFile) {
+            return res.status(400).json({ 
+                message: 'Unsupported file type. Only supported images (JPEG, PNG, WebP) and videos (MP4, MOV, WebM, MPG) are allowed.' 
+            });
+        }
         const clientIP = req.ip || req.connection.remoteAddress;
 
         // Create conversion record with file data
@@ -254,8 +279,8 @@ router.get('/history/categorized', optionalAuth, async (req, res) => {
         console.log(`📊 Total conversions found: ${allConversions.length}`);
 
         // Categorize conversions
-        const imageFormats = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp', 'tiff'];
-        const videoFormats = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'mpeg', 'mpg', 'm4v', '3gp'];
+        const imageFormats = ['jpeg', 'jpg', 'png', 'webp']; // Only supported image formats
+        const videoFormats = ['mp4', 'mov', 'webm', 'mpeg', 'mpg']; // Only supported video formats
 
         // Filter and get the last 5 image conversions (most recent first)
         const imageConversions = allConversions.filter(conv => 
