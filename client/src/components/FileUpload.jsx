@@ -187,6 +187,20 @@ const FileUpload = () => {
             return;
         }
 
+        // Validate format compatibility
+        const imageFormats = getImageFormats();
+        const videoFormats = getVideoFormats();
+        
+        if (isImageFile && !imageFormats.includes(targetFormat)) {
+            alert('Invalid conversion: You can only convert images to supported image formats (JPEG, PNG, WebP)');
+            return;
+        }
+        
+        if (isVideoFile && !videoFormats.includes(targetFormat)) {
+            alert('Invalid conversion: You can only convert videos to supported video formats (MP4, MOV, WebM, MPG)');
+            return;
+        }
+
         // Check if user can upload
         if (uploadLimits && !uploadLimits.canUpload && !uploadLimits.unlimited) {
             alert(`Upload limit reached. You have used ${uploadLimits.used}/${uploadLimits.limit} uploads. Try again after ${new Date(uploadLimits.resetTime).toLocaleString()}`);
@@ -318,12 +332,12 @@ const FileUpload = () => {
         }
     };
 
-    const getImageFormats = () => ['jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff'];
-    const getVideoFormats = () => ['mp4', 'avi', 'mov', 'wmv', 'webm', 'mkv', 'flv', 'mpeg', 'mpg', 'm4v'];
+    const getImageFormats = () => ['jpeg', 'png', 'webp']; // Only supported image formats
+    const getVideoFormats = () => ['mp4', 'mov', 'webm', 'mpg']; // Only supported video formats
 
     // Check if the file is an image or video based on its extension
-    const isImageFile = file && /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i.test(file.name);
-    const isVideoFile = file && /\.(mp4|avi|mov|wmv|flv|mkv|webm|mpeg|mpg|m4v|3gp)$/i.test(file.name);
+    const isImageFile = file && /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+    const isVideoFile = file && /\.(mp4|mov|webm|mpeg|mpg)$/i.test(file.name);
     
     // Function to safely get stored user (utility function)
     const getStoredUser = () => {

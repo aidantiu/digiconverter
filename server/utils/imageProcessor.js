@@ -13,6 +13,11 @@ const { Conversion } = require('../model/models');
 async function processImageConversion(fileBuffer, originalName, mimeType, targetFormat, conversionId) {
     console.log(`🖼️ Converting image: ${originalName} -> ${targetFormat}`);
     
+    // Validate target format is supported
+    if (!isValidImageFormat(targetFormat)) {
+        throw new Error(`Unsupported image format: ${targetFormat}. Supported formats: JPEG, PNG, WebP`);
+    }
+    
     // Set initial progress
     try {
         await Conversion.findByIdAndUpdate(conversionId, { progress: 10 });
@@ -88,10 +93,7 @@ function getImageMimeType(format) {
         'jpeg': 'image/jpeg',
         'jpg': 'image/jpeg',
         'png': 'image/png',
-        'webp': 'image/webp',
-        'gif': 'image/gif',
-        'bmp': 'image/bmp',
-        'tiff': 'image/tiff'
+        'webp': 'image/webp'
     };
     return mimeTypes[format.toLowerCase()] || 'application/octet-stream';
 }
@@ -102,7 +104,7 @@ function getImageMimeType(format) {
  * @returns {boolean} - True if valid image format
  */
 function isValidImageFormat(format) {
-    const validFormats = ['jpeg', 'jpg', 'png', 'webp', 'gif', 'bmp', 'tiff'];
+    const validFormats = ['jpeg', 'jpg', 'png', 'webp']; // Only supported formats
     return validFormats.includes(format.toLowerCase());
 }
 
@@ -112,7 +114,7 @@ function isValidImageFormat(format) {
  * @returns {boolean} - True if image file
  */
 function isImageFile(filename) {
-    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i;
+    const imageExtensions = /\.(jpg|jpeg|png|webp)$/i;
     return imageExtensions.test(filename);
 }
 

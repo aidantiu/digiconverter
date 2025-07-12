@@ -14,6 +14,11 @@ npm-debug.log
 docker-compose.yml
 Dockerfile
 
-# Directories
-uploads
-processed
+# Directories (ignore contents but keep structure)
+uploads/*
+processed/*
+!uploads/.gitkeep
+!processed/.gitkeep
+
+# Ignore all markdown files
+*.md

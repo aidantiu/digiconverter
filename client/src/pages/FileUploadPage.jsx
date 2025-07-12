@@ -12,7 +12,7 @@ const FileUploadPage = () => {
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">Convert Your Files</h1>
-                    <p className="text-lg text-gray-600">Upload and convert your images and videos to any format</p>
+                    <p className="text-lg text-gray-600">Upload and convert images to JPEG, PNG, WebP or videos to MP4, MOV, WebM, MPG</p>
                 </div>
                 
                 <FileUpload />

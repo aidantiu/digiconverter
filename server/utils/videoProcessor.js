@@ -65,24 +65,22 @@ async function processVideoConversion(fileBuffer, originalName, mimeType, target
             console.warn('Could not update initial progress:', updateError.message);
         }
 
-    // Map file extensions to FFmpeg format names
+    // Map file extensions to FFmpeg format names (only supported formats)
     const formatMapping = {
         'mp4': 'mp4',
-        'avi': 'avi',
         'mov': 'mov',
-        'wmv': 'wmv',
-        'flv': 'flv',
-        'mkv': 'matroska',
         'webm': 'webm',
         'mpeg': 'mpeg',
-        'mpg': 'mpeg',  // MPG files use MPEG format in FFmpeg
-        'm4v': 'mp4',   // M4V is essentially MP4
-        '3gp': '3gp',
-        'asf': 'asf'
+        'mpg': 'mpeg'  // MPG files use MPEG format in FFmpeg
     };
 
+    // Validate target format is supported
+    if (!formatMapping[targetFormat.toLowerCase()]) {
+        throw new Error(`Unsupported video format: ${targetFormat}. Supported formats: MP4, MOV, WEBM, MPG`);
+    }
+
     // Get the proper FFmpeg format name
-    const ffmpegFormat = formatMapping[targetFormat.toLowerCase()] || targetFormat.toLowerCase();
+    const ffmpegFormat = formatMapping[targetFormat.toLowerCase()];
 
     return new Promise((resolve, reject) => {
         // Handle video conversion with FFmpeg
