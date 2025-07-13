@@ -1,4 +1,16 @@
+/* Import Inter font from Google Fonts - Regular 400 weight only */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
+
 @import "tailwindcss";
+
+/* Global font configuration - Inter 400 for entire website */
+html,
+body,
+#root,
+* {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif !important;
+}
+
 
 /* Custom animations */
 @keyframes fade-in {
