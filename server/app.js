@@ -26,7 +26,7 @@ app.use('/api/conversions', conversionRoutes);
 app.use('/api/upload', express.static('uploads')); // Serve static files from 'uploads' directory
 
 // Connect to DB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI, {})
     .then(() => {
         console.log('✅ MongoDB Connected');
         app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
