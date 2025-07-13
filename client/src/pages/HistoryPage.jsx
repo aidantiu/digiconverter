@@ -59,6 +59,7 @@ const HistoryPage = () => {
                 }
             }
 
+            // Fetch categorized history from the API
             const token = authUtils.getToken();
             const response = await fetch(`${API_ENDPOINTS.history}/categorized`, {
                 headers: {
@@ -75,6 +76,7 @@ const HistoryPage = () => {
                 throw new Error('Failed to fetch history');
             }
 
+            // Parse the response
             const data = await response.json();
             setHistory(data);
             
@@ -107,6 +109,7 @@ const HistoryPage = () => {
         }
     };
 
+    // Format time ago for display
     const formatTimeAgo = (dateString) => {
         const now = new Date();
         const date = new Date(dateString);
@@ -121,6 +124,7 @@ const HistoryPage = () => {
         return `${Math.floor(diffInSeconds / 29030400)} y ago`;
     };
 
+    // Format file size for display
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -129,6 +133,7 @@ const HistoryPage = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    // Render history items
     const ConversionCard = ({ conversion, type }) => {
         const [thumbnailError, setThumbnailError] = useState(false);
         const [thumbnailUrl, setThumbnailUrl] = useState(null);
