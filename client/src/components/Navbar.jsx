@@ -49,7 +49,7 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-6">
                     {/* Logo */}
-                    <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
+                    <Link to="/" className="text-2xl font-bold hover:text-purple-600 transition-colors">
                         DigiConverter
                     </Link>
                     
@@ -62,7 +62,7 @@ const Navbar = () => {
                                 className={`font-medium transition-colors ${
                                     isActiveLink('/upload') 
                                         ? 'text-purple-600 border-b-2 border-purple-600 pb-1' 
-                                        : 'text-gray-600 hover:text-purple-600'
+                                        : 'hover:text-purple-600'
                                 }`}
                             >
                                 Upload
@@ -72,7 +72,7 @@ const Navbar = () => {
                                 className={`font-medium transition-colors ${
                                     isActiveLink('/history') 
                                         ? 'text-purple-600 border-b-2 border-purple-600 pb-1' 
-                                        : 'text-gray-600 hover:text-purple-600'
+                                        : 'hover:text-purple-600'
                                 }`}
                             >
                                 History

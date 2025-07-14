@@ -437,7 +437,7 @@ const FileUpload = () => {
             {isLoggedIn && showWelcomeMessage && (
                 <div className="bg-gradient-to-r from-green-100 to-green-50 border-2 border-green-200 rounded-xl p-6 mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
-                        <span className="text-gray-800 text-lg">👋 Welcome back, <strong>{user?.username}</strong>!</span>
+                        <span className="text-lg">👋 Welcome back, <strong>{user?.username}</strong>!</span>
                         <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full font-semibold text-sm">
                             🚀 Unlimited Uploads
                         </div>
@@ -448,7 +448,7 @@ const FileUpload = () => {
             {!isLoggedIn && (
                 <div className="bg-gradient-to-r from-orange-100 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
-                        <span className="text-orange-800 text-lg">🎯 You're using anonymous mode</span>
+                        <span className="text-lg">🎯 You're using anonymous mode</span>
                         <Link to="/login" className="bg-purple-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-purple-700 transition-colors">
                             🔐 Login for unlimited uploads
                         </Link>
@@ -481,7 +481,7 @@ const FileUpload = () => {
                 <div>
                     {!file && (
                         <>
-                            <label htmlFor="file" className="block text-lg font-semibold text-gray-900 mb-4">
+                            <label htmlFor="file" className="block text-lg font-semibold mb-4">
                                 📁 Select File to Convert
                             </label>
                             <input
@@ -492,7 +492,7 @@ const FileUpload = () => {
                                 disabled={isUploading}
                                 className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
                             />
-                            <div className="mt-2 text-sm text-gray-600 text-center">
+                            <div className="mt-2 text-sm text-center">
                                 <p><strong>Supported formats:</strong></p>
                                 <p>📸 Images: JPEG, PNG, WebP | 🎬 Videos: MP4, MOV, WebM, MPG</p>
                             </div>
@@ -524,8 +524,8 @@ const FileUpload = () => {
                                 
                                 <div className="flex items-start space-x-3">
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-gray-900 truncate">{file.name}</p>
-                                        <p className="text-sm text-gray-600 mb-3">
+                                        <p className="font-medium truncate">{file.name}</p>
+                                        <p className="text-sm mb-3">
                                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                                         </p>
                                         
@@ -556,7 +556,7 @@ const FileUpload = () => {
                 {file && (
                     <div className="space-y-4 mt-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
-                            <label className="text-lg font-semibold text-gray-700 sm:whitespace-nowrap">🔄 Convert to:</label>
+                            <label className="text-lg font-semibold sm:whitespace-nowrap">🔄 Convert to:</label>
                             <select
                                 value={targetFormat}
                                 onChange={(e) => setTargetFormat(e.target.value)}
@@ -595,7 +595,7 @@ const FileUpload = () => {
             {/* Conversion Status */}
             {conversionStatus && (
                 <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Conversion Status</h3>
+                    <h3 className="text-lg font-semibold mb-4">Conversion Status</h3>
                     
                     {/* Progress Bar */}
                     {isConverting && (
@@ -625,7 +625,7 @@ const FileUpload = () => {
                     
                     {/* Debug Info */}
                     {conversionStatus.id && (
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="text-sm mb-3">
                             <strong>Conversion ID:</strong> {conversionStatus.id}
                         </p>
                     )}
