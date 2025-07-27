@@ -34,16 +34,7 @@ const SessionExpiredModal = ({ isOpen, onClose, onLogin }) => {
                         Your login session has expired for security reasons. Please log in again to continue using unlimited uploads and access your conversion history.
                     </p>
 
-                    {/* Benefits reminder */}
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 mb-6">
-                        <h4 className="font-semibold text-gray-800 mb-2">🚀 Login Benefits:</h4>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                            <li>• Unlimited file conversions</li>
-                            <li>• Conversion history & downloads</li>
-                            <li>• Priority processing</li>
-                        </ul>
-                    </div>
-
+                
                     {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Link

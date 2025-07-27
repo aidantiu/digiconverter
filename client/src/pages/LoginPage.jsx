@@ -6,8 +6,6 @@ import Loader from '../components/Loader';
 
 function LoginPage() {
     const [formData, setFormData] = useState({
-        email: 'test@digiconverter.com', // Pre-filled with test user
-        password: 'testpassword123'      // Pre-filled with test password
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -128,17 +126,9 @@ function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-5">
             <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-lg animate-fade-in">
                 <h2 className="text-3xl font-bold text-center mb-2">🔐 Login to DigiConverter</h2>
-                <p className="text-center mb-8">Test unlimited file conversions</p>
-                
-                <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-5 mb-6">
-                    <h4 className="text-lg font-semibold mb-3">🧪 Test User Credentials (Pre-filled)</h4>
-                    <div className="space-y-2 text-sm">
-                        <p>📧 <strong>Email:</strong> test@digiconverter.com</p>
-                        <p>🔑 <strong>Password:</strong> testpassword123</p>
-                        <p>⭐ <strong>Features:</strong> Unlimited uploads</p>
-                    </div>
-                </div>
+        
 
+                {/* Pre-filled form for testing */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="email" className="block text-sm font-semibold mb-2">Email Address</label>
@@ -189,15 +179,6 @@ function LoginPage() {
                         )}
                     </button>
                 </form>
-
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">💡 <strong>Testing Tips:</strong></p>
-                    <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                        <li>Use the pre-filled test credentials</li>
-                        <li>Logged-in users get unlimited uploads</li>
-                        <li>Test file conversions without limits</li>
-                    </ul>
-                </div>
             </div>
         </div>
     );
