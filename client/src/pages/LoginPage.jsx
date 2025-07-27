@@ -6,6 +6,7 @@ import Loader from '../components/Loader';
 
 function LoginPage() {
     const [formData, setFormData] = useState({
+
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');

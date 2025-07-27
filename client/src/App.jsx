@@ -10,7 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen font-normal">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/upload" element={<FileUploadPage />} />

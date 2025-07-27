@@ -45,21 +45,21 @@ const Navbar = () => {
     };
 
     return (
-        <header className="bg-white shadow-sm">
+        <header className="bg-gray-50 ">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center py-6">
+                <div className="flex justify-between items-center py-4">
                     {/* Logo */}
-                    <Link to="/" className="text-2xl font-bold hover:text-purple-600 transition-colors">
+                    <Link to="/" className="text-lg font-semibold hover:text-purple-600 transition-colors">
                         DigiConverter
                     </Link>
                     
-                    {/* Navigation and Auth Section - Combined on the right */}
+                    {/* Navigation and Auth Section */}
                     <div className="flex items-center space-x-6">
                         {/* Navigation Links */}
                         <nav className="hidden md:flex items-center space-x-6">
                             <Link 
                                 to="/upload" 
-                                className={`font-medium transition-colors ${
+                                className={`text-sm transition-colors ${
                                     isActiveLink('/upload') 
                                         ? 'text-purple-600 border-b-2 border-purple-600 pb-1' 
                                         : 'hover:text-purple-600'
@@ -69,7 +69,7 @@ const Navbar = () => {
                             </Link>
                             <Link 
                                 to="/history" 
-                                className={`font-medium transition-colors ${
+                                className={`text-sm transition-colors ${
                                     isActiveLink('/history') 
                                         ? 'text-purple-600 border-b-2 border-purple-600 pb-1' 
                                         : 'hover:text-purple-600'
@@ -87,10 +87,10 @@ const Navbar = () => {
                                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                                     className="flex items-center space-x-2 bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded-lg transition-colors"
                                 >
-                                    <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                    <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                                         {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                                     </div>
-                                    <span className="hidden sm:block font-medium">{user?.username}</span>
+                                    <span className="hidden sm:block text-sm">{user?.username}</span>
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -130,17 +130,18 @@ const Navbar = () => {
                         ) : (
                             <div className="flex items-center space-x-3">
                                 <Link 
-                                    to="/register" 
-                                    className="text-gray-600 hover:text-purple-600 font-medium transition-colors"
+                                    to="/login" 
+                                    className="hover:text-purple-600 text-sm transition-colors"
                                 >
-                                    Register
+                                    Log in
                                 </Link>
                                 <Link 
-                                    to="/login" 
-                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                                    to="/register" 
+                                    className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
                                 >
-                                    Login
+                                    Get Started
                                 </Link>
+                                
                             </div>
                         )}
 
