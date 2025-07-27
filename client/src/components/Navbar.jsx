@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { authUtils } from '../utils/auth';
+import { MdOutlineFlipCameraAndroid } from "react-icons/md";
 
 const Navbar = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -61,8 +62,9 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-4">
                     {/* Logo */}
-                    <Link to="/" className="text-lg font-bold font-stretch-ultra-expanded hover:text-black transition-colors">
-                        DigiConvert
+                    <Link to="/" className="flex items-center text-lg hover:text-black transition-colors">
+                        <MdOutlineFlipCameraAndroid className="w-7 h-7 mr-2" /> 
+                        <p className='font-extrabold'>DigiConvert</p>
                     </Link>
                     
                     {/* Navigation and Auth Section */}

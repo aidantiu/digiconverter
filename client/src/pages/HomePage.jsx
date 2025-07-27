@@ -8,6 +8,7 @@ import { CiCreditCardOff } from "react-icons/ci";
 import { GoUnlock } from "react-icons/go";
 import { IoFlashOutline } from "react-icons/io5";
 
+
 const HomePage = () => {
     return (
         <div className="min-h-screen bg-gray-50">
@@ -108,7 +109,7 @@ const HomePage = () => {
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-10">
+                <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-5">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Card 1 */}
                         <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
