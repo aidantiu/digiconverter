@@ -8,12 +8,24 @@ const Navbar = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [authChecking, setAuthChecking] = useState(true);
+    const [hasScrolled, setHasScrolled] = useState(false);
     const location = useLocation();
 
     // Check authentication status on component mount and when location changes
     useEffect(() => {
         checkAuthStatus();
     }, [location]);
+
+    // Add scroll listener to toggle shadow
+    useEffect(() => {
+        const handleScroll = () => {
+            setHasScrolled(window.scrollY > 0);
+        };
+        window.addEventListener('scroll', handleScroll);
+        // Check on mount
+        handleScroll();
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const checkAuthStatus = () => {
         // Use quick auth status - no server call, no loading state needed
@@ -45,11 +57,11 @@ const Navbar = () => {
     };
 
     return (
-        <header className="bg-gray-50 ">
+        <header className={`sticky top-0 z-50 bg-gray-50/80 backdrop-blur${hasScrolled ? ' shadow-sm' : ''}`}> 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-4">
                     {/* Logo */}
-                    <Link to="/" className="text-lg font-bold font-stretch-semi-expanded hover:text-black transition-colors">
+                    <Link to="/" className="text-lg font-bold font-stretch-ultra-expanded hover:text-black transition-colors">
                         DigiConvert
                     </Link>
                     
