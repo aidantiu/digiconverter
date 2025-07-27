@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { FaRegMoneyBillAlt } from "react-icons/fa";
@@ -31,19 +31,43 @@ const HomePage = () => {
                         </Link>
                     </div>
 
+                    {/* Stats Section with bounce animation */}
+                    <style>{`
+                        @keyframes smooth-wave {
+                            0% { transform: translateY(0); }
+                            8% { transform: translateY(-4px); }
+                            16% { transform: translateY(-8px); }
+                            25% { transform: translateY(-12px); }
+                            33% { transform: translateY(-14px); }
+                            41% { transform: translateY(-16px); }
+                            50% { transform: translateY(-18px); }
+                            58% { transform: translateY(-16px); }
+                            66% { transform: translateY(-14px); }
+                            75% { transform: translateY(-12px); }
+                            83% { transform: translateY(-8px); }
+                            91% { transform: translateY(-4px); }
+                            100% { transform: translateY(0); }
+                        }
+                    `}</style>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                        <div className="text-center border-r last:border-r-0 border-gray-200">
-                            <span className="text-4xl font-bold text-black block mb-2">3</span>
-                            <span>Free uploads daily</span>
-                        </div>
-                        <div className="text-center border-r last:border-r-0 border-gray-200">
-                            <span className="text-4xl font-bold text-black block mb-2">∞</span>
-                            <span>Unlimited for members</span>
-                        </div>
-                        <div className="text-center border-r last:border-r-0 border-gray-200">
-                            <span className="text-4xl font-bold text-black block mb-2">7</span>
-                            <span>Supported formats</span>
-                        </div>
+                        {[ 
+                            { value: '3', label: 'Free uploads daily' },
+                            { value: '∞', label: 'Unlimited for members' },
+                            { value: '7', label: 'Supported formats' },
+                        ].map((stat, idx, arr) => (
+                            <div
+                                key={stat.value}
+                                className="text-center border-r last:border-r-0 border-gray-200"
+                                style={{
+                                    animation: `smooth-wave 3.2s linear infinite`,
+                                    animationDelay: `${idx * 1.05}s`,
+                                    animationFillMode: 'both',
+                                }}
+                            >
+                                <span className="text-4xl font-bold text-black block mb-2">{stat.value}</span>
+                                <span>{stat.label}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </main>
