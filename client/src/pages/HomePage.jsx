@@ -4,6 +4,9 @@ import Navbar from '../components/Navbar';
 import { FaRegMoneyBillAlt } from "react-icons/fa";
 import { TbUsers } from "react-icons/tb";
 import { FaRegClock } from "react-icons/fa";
+import { CiCreditCardOff } from "react-icons/ci";
+import { GoUnlock } from "react-icons/go";
+import { IoFlashOutline } from "react-icons/io5";
 
 const HomePage = () => {
     return (
@@ -72,7 +75,7 @@ const HomePage = () => {
                 </div>
             </main>
 
-            {/* Features Section */}
+            {/* Hook Section */}
             <section className="bg-transparent py-20 my-10">
                 <div className="text-center mb-12">
                     <h1 className="text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl">What do we provide?</h1>
@@ -82,7 +85,7 @@ const HomePage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                         {/* Main Feature Card */}
-                        <div className="lg:col-span-2 flex flex-col align-middlebg-white rounded-2xl shadow-md p-10 min-h-[320px] relative overflow-hidden border border-gray-100">
+                        <div className="lg:col-span-2 flex flex-col align-middlebg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-10 min-h-[320px] relative overflow-hidden border border-gray-100">
                             <span className="inline-block w-fit px-4 py-2 mb-8 text-xs bg-gradient-to-r from-purple-200 to-blue-100 text-purple-700 rounded-full">Featured</span>
                             <h2 className="text-3xl font-extrabold mb-4">Simple and Accessible</h2>
                             <p className="text-md text-gray-600 mb-8">No subscriptions. No hidden limits. We believe file conversion—especially for old Digicam formats—should be easy, fast, and free for everyone.</p>
@@ -91,21 +94,44 @@ const HomePage = () => {
 
                         {/* Right Feature Cards */}
                         <div className="flex flex-col gap-6">
-                            <div className="bg-blue-50 rounded-2xl shadow-sm p-6 flex-1 border border-blue-100">
+                            <div className="bg-blue-50 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 p-6 flex-1 border border-blue-100">
                                 <TbUsers className='w-6 h-6 mb-3'/>
                                 <h3 className="text-lg font-semibold mb-2">Format-Ready</h3>
                                 <p className="text-gray-600 text-sm">Support for classic Digicam formats like MPG, MOV, and more.</p>
                             </div>
-                            <div className="bg-purple-50 rounded-2xl shadow-sm p-6 flex-1 border border-purple-100">
+                            <div className="bg-purple-50 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 p-6 flex-1 border border-purple-100">
                                 <FaRegClock className='w-6 h-6 mb-3'/>
                                 <h3 className="text-lg font-bold mb-2"> Convert on Your Time </h3>
                                 <p className="text-gray-600 text-sm">Upload and convert at your pace. Just smooth media transformation when you need it.</p>
                             </div>
                         </div>
                     </div>
-                   
+                </div>
+
+                <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Card 1 */}
+                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
+                            <CiCreditCardOff className="h-10 w-10 mb-4 fill-green-600" />
+                            <h3 className="text-lg font-bold mb-2">No Hidden Costs</h3>
+                            <p className="text-gray-600 text-sm">No subscriptions or hidden fees – free for everyone.</p>
+                        </div>
+                        {/* Card 2 */}
+                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
+                            <GoUnlock className="h-10 w-10 mb-4 fill-yellow-600" />
+                            <h3 className="text-lg font-bold mb-2">Unlimited Conversions</h3>
+                            <p className="text-gray-600 text-sm">No limits for registered users.</p>
+                        </div>
+                        {/* Card 3 */}
+                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
+                            <IoFlashOutline className="h-10 w-10 mb-4 stroke-red-600" />
+                            <h3 className="text-lg font-bold mb-2">Priority & History</h3>
+                            <p className="text-gray-600 text-sm">History tracking and faster processing for logged-in users.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
+
 
             {/* Membership CTA Section */}
             <section className="bg-gradient-to-r from-purple-600 to-pink-600 py-20">
