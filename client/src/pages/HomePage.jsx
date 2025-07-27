@@ -9,31 +9,36 @@ const HomePage = () => {
             <Navbar />
 
             {/* Hero Section */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <main className="max-w-7xl mx-auto px-10 sm:px-20 md:px-30 lg:px-40 py-15">
                 <div className="text-center">
-                    <h1 className="text-5xl font-bold mb-6">Convert Your Files Instantly</h1>
-                    <p className="text-xl mb-10 max-w-3xl mx-auto">Transform images to JPEG, PNG, or WebP and videos to MP4, MOV, WebM, or MPG. Fast, secure, and free for everyone.</p>
+
+                    <div className="mb-6">
+                        <span className="inline-block px-4 py-1.5 text-sm text-medium bg-black text-white rounded-full mb-4">Digicam-First Format Converter</span>
+                    </div>
+
+                    <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none bg-gradient-to-r from-black via-gray-700 to-black bg-clip-text text-transparent">Let’s help you showcase the moments that matter</h1>
+                    <p className="mx-auto my-6 max-w-[700px] text-gray-600 md:text-lg lg:text-xl leading-relaxed mb-5">Preserve priceless digicam moments, convert them into future-proof formats, and relive your memories anytime, anywhere.</p>
                     
-                    <div className="flex justify-center space-x-4 mb-16">
-                        <Link to="/upload" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 transform hover:-translate-y-1 shadow-lg">
-                            Start Converting
+                    <div className="flex flex-col sm:flex-col md:flex-row justify-center md:space-x-4 space-y-4 md:space-y-0 mt-8 mb-16">
+                        <Link to="/register" className="px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium text-white bg-black rounded-xl hover:bg-gray-800 transition-all duration-300 hover:shadow-lg hover-lift flex items-center justify-center">
+                            Get Started 
                         </Link>
-                        <Link to="/upload" className="bg-white text-purple-600 border-2 border-purple-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-purple-50 transition-all duration-200">
-                            Learn More
+                        <Link to="/upload" className="px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium text-black bg-white border-2 border-black rounded-xl hover:bg-gray-50 transition-all duration-300 hover:shadow-md hover-lift flex items-center justify-center">
+                            See How It Works
                         </Link>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                        <div className="text-center">
-                            <span className="text-4xl font-bold text-purple-600 block">3</span>
+                        <div className="text-center border-r last:border-r-0 border-gray-200">
+                            <span className="text-4xl font-bold text-black block mb-2">3</span>
                             <span>Free uploads daily</span>
                         </div>
-                        <div className="text-center">
-                            <span className="text-4xl font-bold text-purple-600 block">∞</span>
+                        <div className="text-center border-r last:border-r-0 border-gray-200">
+                            <span className="text-4xl font-bold text-black block mb-2">∞</span>
                             <span>Unlimited for members</span>
                         </div>
-                        <div className="text-center">
-                            <span className="text-4xl font-bold text-purple-600 block">7</span>
+                        <div className="text-center border-r last:border-r-0 border-gray-200">
+                            <span className="text-4xl font-bold text-black block mb-2">7</span>
                             <span>Supported formats</span>
                         </div>
                     </div>

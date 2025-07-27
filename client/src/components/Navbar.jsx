@@ -49,20 +49,20 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-4">
                     {/* Logo */}
-                    <Link to="/" className="text-lg font-semibold hover:text-purple-600 transition-colors">
-                        DigiConverter
+                    <Link to="/" className="text-lg font-bold font-stretch-semi-expanded hover:text-black transition-colors">
+                        DigiConvert
                     </Link>
                     
                     {/* Navigation and Auth Section */}
                     <div className="flex items-center space-x-6">
                         {/* Navigation Links */}
-                        <nav className="hidden md:flex items-center space-x-6">
+                        <nav className="hidden md:flex items-center space-x-6 text-gray-700">
                             <Link 
                                 to="/upload" 
                                 className={`text-sm transition-colors ${
                                     isActiveLink('/upload') 
-                                        ? 'text-purple-600 border-b-2 border-purple-600 pb-1' 
-                                        : 'hover:text-purple-600'
+                                        ? 'text-black border-b-2 border-black-600 pb-1' 
+                                        : 'hover:text-black'
                                 }`}
                             >
                                 Upload
@@ -71,8 +71,8 @@ const Navbar = () => {
                                 to="/history" 
                                 className={`text-sm transition-colors ${
                                     isActiveLink('/history') 
-                                        ? 'text-purple-600 border-b-2 border-purple-600 pb-1' 
-                                        : 'hover:text-purple-600'
+                                        ? 'text-black border-b-2 border-black-600 pb-1' 
+                                        : 'hover:text-black'
                                 }`}
                             >
                                 History
@@ -128,20 +128,19 @@ const Navbar = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="flex items-center space-x-3">
+                            <div className="hidden md:flex items-center space-x-3">
                                 <Link 
                                     to="/login" 
-                                    className="hover:text-purple-600 text-sm transition-colors"
+                                    className="hover:text-black text-sm transition-colors"
                                 >
                                     Log in
                                 </Link>
                                 <Link 
                                     to="/register" 
-                                    className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                                    className="bg-black text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm"
                                 >
                                     Get Started
                                 </Link>
-                                
                             </div>
                         )}
 
