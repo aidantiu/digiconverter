@@ -112,19 +112,19 @@ const HomePage = () => {
                 <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-5">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Card 1 */}
-                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
+                        <div className="bg-green-50 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
                             <CiCreditCardOff className="h-10 w-10 mb-4 fill-green-600" />
                             <h3 className="text-lg font-bold mb-2">No Hidden Costs</h3>
                             <p className="text-gray-600 text-sm">No subscriptions or hidden fees – free for everyone.</p>
                         </div>
                         {/* Card 2 */}
-                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
+                        <div className="bg-amber-50 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
                             <GoUnlock className="h-10 w-10 mb-4 fill-yellow-600" />
                             <h3 className="text-lg font-bold mb-2">Unlimited Conversions</h3>
                             <p className="text-gray-600 text-sm">No limits for registered users.</p>
                         </div>
                         {/* Card 3 */}
-                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
+                        <div className="bg-red-50 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
                             <IoFlashOutline className="h-10 w-10 mb-4 stroke-red-600" />
                             <h3 className="text-lg font-bold mb-2">Priority & History</h3>
                             <p className="text-gray-600 text-sm">History tracking and faster processing for logged-in users.</p>
@@ -135,37 +135,38 @@ const HomePage = () => {
 
 
             {/* Membership CTA Section */}
-            <section className="bg-gradient-to-r from-purple-600 to-pink-600 py-20">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
-                        <h2 className="text-3xl font-bold mb-4">🚀 Ready for Unlimited Conversions?</h2>
-                        <p className="text-xl mb-8">Login to unlock unlimited file conversions, priority processing, and extended file history.</p>
-                        
-                        <div className="flex justify-center space-x-12 mb-8">
-                            <div className="flex flex-col items-center">
-                                <span className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-xl font-bold mb-2">∞</span>
-                                <span className="font-medium">Unlimited uploads</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-xl font-bold mb-2">⚡</span>
-                                <span className="font-medium">Priority processing</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-xl font-bold mb-2">📋</span>
-                                <span className="font-medium">Conversion history</span>
-                            </div>
-                        </div>
+            <section className="inset-0 bg-gradient-to-b from-gray-50 to-white z-0 py-10">
+                <div className="flex mx-auto mb-4 items-center p-1.5 bg-gray-200 rounded-full w-fit">
+                    <IoFlashOutline className='h-3 w-3 mr-1 fill-gray-600'></IoFlashOutline>
+                    <p className='text-xs text-gray-600'>Simple Process</p>    
+                </div>
+                <h1 className='text-center text-3xl font-[1000] mb-6'>Easy to Get Started</h1>
+                <p className=' text-gray-500 text-center mx-auto text-lg'>A simple way to convert Digicam files and preserve your memories</p>
 
-                        <div className="space-y-4">
-                            <Link to="/login" className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-4 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 transform hover:-translate-y-1 shadow-lg">
-                                🔐 Login for Unlimited Access
-                            </Link>
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                <small>💡 <strong>Testing?</strong> Use our pre-filled test credentials on the login page</small>
-                            </div>
+                {/* Cards */}
+                <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-5 mt-15">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Card 1 */}
+                        <div className="rounded-3xl border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 transform px-8 py-15 flex flex-col">
+                            <h1 className='text-5xl font-bold text-gray-300 mb-8'>01</h1>
+                            <h3 className="text-lg font-bold mb-5">Create an Account</h3>
+                            <p className="text-gray-600 text-sm">Sign up for free and tell us a bit about your style preferences to get started.</p>
+                        </div>
+                        {/* Card 2 */}
+                        <div className="rounded-3xl border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 px-8 py-15 hover:-translate-y-2 transform flex flex-col">
+                            <h1 className='text-5xl font-bold text-gray-300 mb-8'>02</h1>
+                            <h3 className="text-lg font-bold mb-5">Upload Your Files</h3>
+                            <p className="text-gray-600 text-sm">Add old videos or photos from your Digicam — MPG, MOV, and more.</p>
+                        </div>
+                        {/* Card 3 */}
+                        <div className="rounded-3xl border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 px-8 py-15 flex flex-col">
+                            <h1 className='text-5xl font-bold text-gray-300 mb-8'>03</h1>
+                            <h3 className="text-lg font-bold mb-5">Convert and Relive</h3>
+                            <p className="text-gray-600 text-sm"> Get high-quality, modern-format versions ready to view, share, or store.</p>
                         </div>
                     </div>
                 </div>
+                
             </section>
 
             {/* Footer */}
