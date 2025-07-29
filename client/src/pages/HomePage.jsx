@@ -7,6 +7,9 @@ import { FaRegClock } from "react-icons/fa";
 import { CiCreditCardOff } from "react-icons/ci";
 import { GoUnlock } from "react-icons/go";
 import { IoFlashOutline } from "react-icons/io5";
+import { SlSocialFacebook } from "react-icons/sl";
+import { IoLogoInstagram } from "react-icons/io";
+import { CiLinkedin } from "react-icons/ci";
 
 
 const HomePage = () => {
@@ -77,7 +80,7 @@ const HomePage = () => {
             </main>
 
             {/* Hook Section */}
-            <section className="bg-transparent py-20 my-10">
+            <section className="bg-[#fdfeff] py-20 my-10">
                 <div className="text-center mb-12">
                     <h1 className="text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl">What do we provide?</h1>
                     <p className='mt-4 max-w-[800px] mx-auto text-gray-600 text-lg'>No subscriptions. No complicated software. Just a fast, secure way to convert your Digicam files and keep your memories accessible.</p>
@@ -136,7 +139,7 @@ const HomePage = () => {
 
             {/* Membership CTA Section */}
             <section className="inset-0 bg-gradient-to-b from-gray-50 to-white z-0 py-10">
-                <div className="flex mx-auto mb-4 items-center p-1.5 bg-gray-200 rounded-full w-fit">
+                <div className="flex mx-auto mb-2 items-center p-1.5 bg-gray-200 rounded-full w-fit">
                     <IoFlashOutline className='h-3 w-3 mr-1 fill-gray-600'></IoFlashOutline>
                     <p className='text-xs text-gray-600'>Simple Process</p>    
                 </div>
@@ -170,9 +173,36 @@ const HomePage = () => {
             </section>
 
             {/* Footer */}
-            <footer className="bg-gray-800 text-white py-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <p>&copy; 2025 DigiConverter. All rights reserved.</p>
+            <footer className="bg-black text-white py-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-15">
+                        {/* About */}
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">About DigiConverter</h3>
+                            <p className="text-sm text-gray-300 leading-relaxed">Preserving your digicam memories, making file conversion accessible, fast, and free for everyone.</p>
+                        </div>
+                        {/* Quick Links */}
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">Quick Links</h3>
+                            <ul className="space-y-2 text-sm">
+                                <li><Link to="/" className="hover:underline text-gray-300" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Home</Link></li>
+                                <li><Link to="/upload" className="hover:underline text-gray-300">How It Works</Link></li>
+                                <li><Link to="/history" className="hover:underline text-gray-300">History</Link></li>
+                               
+                            </ul>
+                        </div>
+                        {/* Spacer for grid alignment on large screens */}
+                        <div className="hidden lg:block"></div>
+                        {/* Connect */}
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">Connect</h3>
+                            <div className="flex space-x-6 mt-2">
+                                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-gray-400"><SlSocialFacebook /></a>
+                                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-gray-400"><IoLogoInstagram /></a>
+                                <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-gray-400"><CiLinkedin /></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </footer>
         </div>
