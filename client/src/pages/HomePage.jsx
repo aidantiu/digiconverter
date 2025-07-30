@@ -197,9 +197,9 @@ const HomePage = () => {
                         <div>
                             <h3 className="text-lg font-bold mb-4">Connect</h3>
                             <div className="flex space-x-6 mt-2">
-                                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-gray-400"><SlSocialFacebook /></a>
-                                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-gray-400"><IoLogoInstagram /></a>
-                                <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-gray-400"><CiLinkedin /></a>
+                                <a href="https://web.facebook.com/haha.hauwieks" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-gray-400"><SlSocialFacebook /></a>
+                                <a href="https://www.instagram.com/y.mnwri/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-gray-400"><IoLogoInstagram /></a>
+                                <a href="https://www.linkedin.com/in/aidan-tiu-58650520b/" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-gray-400"><CiLinkedin /></a>
                             </div>
                         </div>
                     </div>
