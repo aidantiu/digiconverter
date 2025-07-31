@@ -26,7 +26,7 @@ const HomePage = () => {
                         <span className="inline-block px-4 py-1.5 text-sm text-medium bg-black text-white rounded-full mb-4">Digicam-First Format Converter</span>
                     </div>
 
-                    <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none bg-gradient-to-r from-black via-gray-700 to-black bg-clip-text text-transparent">Let’s help you showcase the moments that matter</h1>
+                    <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none bg-gradient-to-r from-black via-gray-700 to-black bg-clip-text text-transparent">Let’s help you showcase the moments that matter</h1>
                     <p className="mx-auto my-6 max-w-[700px] text-gray-600 md:text-lg lg:text-xl leading-relaxed mb-5">Preserve priceless digicam moments, convert them into future-proof formats, and relive your memories anytime, anywhere.</p>
                     
                     <div className="flex flex-col sm:flex-col md:flex-row justify-center md:space-x-4 space-y-4 md:space-y-0 mt-8 mb-16">
@@ -82,7 +82,7 @@ const HomePage = () => {
             {/* Hook Section */}
             <section className="bg-[#fdfeff] py-20 my-10">
                 <div className="text-center mb-12">
-                    <h1 className="text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl">What do we provide?</h1>
+                    <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">What do we provide?</h1>
                     <p className='mt-4 max-w-[800px] mx-auto text-gray-600 text-lg'>No subscriptions. No complicated software. Just a fast, secure way to convert your Digicam files and keep your memories accessible.</p>
                 </div>
                 <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
@@ -91,7 +91,7 @@ const HomePage = () => {
                         {/* Main Feature Card */}
                         <div className="lg:col-span-2 flex flex-col align-middlebg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-10 min-h-[320px] relative overflow-hidden border border-gray-100">
                             <span className="inline-block w-fit px-4 py-2 mb-8 text-xs bg-gradient-to-r from-purple-200 to-blue-100 text-purple-700 rounded-full">Featured</span>
-                            <h2 className="text-3xl font-extrabold mb-4">Simple and Accessible</h2>
+                            <h2 className="text-3xl font-bold mb-4">Simple and Accessible</h2>
                             <p className="text-md text-gray-600 mb-8">No subscriptions. No hidden limits. We believe file conversion—especially for old Digicam formats—should be easy, fast, and free for everyone.</p>
                             <FaRegMoneyBillAlt  className='w-10 h-10 fill-green-600'/>
                         </div>
@@ -105,7 +105,7 @@ const HomePage = () => {
                             </div>
                             <div className="bg-purple-50 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 p-6 flex-1 border border-purple-100">
                                 <FaRegClock className='w-6 h-6 mb-3'/>
-                                <h3 className="text-lg font-bold mb-2"> Convert on Your Time </h3>
+                                <h3 className="text-lg font-semibold mb-2"> Convert on Your Time </h3>
                                 <p className="text-gray-600 text-sm">Upload and convert at your pace. Just smooth media transformation when you need it.</p>
                             </div>
                         </div>
@@ -117,19 +117,19 @@ const HomePage = () => {
                         {/* Card 1 */}
                         <div className="bg-green-50 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
                             <CiCreditCardOff className="h-10 w-10 mb-4 fill-green-600" />
-                            <h3 className="text-lg font-bold mb-2">No Hidden Costs</h3>
+                            <h3 className="text-lg font-semibold mb-2">No Hidden Costs</h3>
                             <p className="text-gray-600 text-sm">No subscriptions or hidden fees – free for everyone.</p>
                         </div>
                         {/* Card 2 */}
                         <div className="bg-amber-50 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
                             <GoUnlock className="h-10 w-10 mb-4 fill-yellow-600" />
-                            <h3 className="text-lg font-bold mb-2">Unlimited Conversions</h3>
+                            <h3 className="text-lg font-semibold mb-2">Unlimited Conversions</h3>
                             <p className="text-gray-600 text-sm">No limits for registered users.</p>
                         </div>
                         {/* Card 3 */}
                         <div className="bg-red-50 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-8 flex flex-col items-center text-center border border-gray-100">
                             <IoFlashOutline className="h-10 w-10 mb-4 stroke-red-600" />
-                            <h3 className="text-lg font-bold mb-2">Priority & History</h3>
+                            <h3 className="text-lg font-semibold mb-2">Priority & History</h3>
                             <p className="text-gray-600 text-sm">History tracking and faster processing for logged-in users.</p>
                         </div>
                     </div>
@@ -143,7 +143,7 @@ const HomePage = () => {
                     <IoFlashOutline className='h-3 w-3 mr-1 fill-gray-600'></IoFlashOutline>
                     <p className='text-xs text-gray-600'>Simple Process</p>    
                 </div>
-                <h1 className='text-center text-3xl font-[1000] mb-6'>Easy to Get Started</h1>
+                <h1 className='text-center text-3xl font-bold mb-6'>Easy to Get Started</h1>
                 <p className=' text-gray-500 text-center mx-auto text-lg'>A simple way to convert Digicam files and preserve your memories</p>
 
                 {/* Cards */}
@@ -162,7 +162,7 @@ const HomePage = () => {
                             <p className="text-gray-600 text-sm">Add old videos or photos from your Digicam — MPG, MOV, and more.</p>
                         </div>
                         {/* Card 3 */}
-                        <div className="rounded-3xl border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 px-8 py-15 flex flex-col">
+                        <div className="rounded-3xl border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 px-8 py-15 hover:-translate-y-2 transform flex flex-col">
                             <h1 className='text-5xl font-bold text-gray-300 mb-8'>03</h1>
                             <h3 className="text-lg font-bold mb-5">Convert and Relive</h3>
                             <p className="text-gray-600 text-sm"> Get high-quality, modern-format versions ready to view, share, or store.</p>

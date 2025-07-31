@@ -64,7 +64,7 @@ const Navbar = () => {
                     {/* Logo */}
                     <Link to="/" className="flex items-center text-lg hover:text-black transition-colors">
                         <MdOutlineFlipCameraAndroid className="w-7 h-7 mr-2" /> 
-                        <p className='font-extrabold'>DigiConvert</p>
+                        <p className='font-bold'>DigiConvert</p>
                     </Link>
                     
                     {/* Navigation and Auth Section */}
@@ -162,7 +162,7 @@ const Navbar = () => {
                         <div className="md:hidden">
                             <button 
                                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                                className="text-gray-600 hover:text-purple-600 p-2"
+                                className="text-gray-600 hover:text-black p-2"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     {showMobileMenu ? (
@@ -185,8 +185,8 @@ const Navbar = () => {
                                 onClick={() => setShowMobileMenu(false)}
                                 className={`font-medium transition-colors px-2 py-1 ${
                                     isActiveLink('/upload') 
-                                        ? 'text-purple-600 bg-purple-50 rounded' 
-                                        : 'text-gray-600 hover:text-purple-600'
+                                        ? 'text-gray-600 bg-purple-50 rounded' 
+                                        : 'text-gray-600 hover:text-black'
                                 }`}
                             >
                                 Upload
