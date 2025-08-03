@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { authUtils } from '../utils/auth';
 import { MdOutlineFlipCameraAndroid } from "react-icons/md";
+import { FaUser } from "react-icons/fa";
+import { GrPowerCycle } from "react-icons/gr";
+import { PiSignOutFill } from "react-icons/pi";
 
 const Navbar = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -11,6 +14,7 @@ const Navbar = () => {
     const [authChecking, setAuthChecking] = useState(true);
     const [hasScrolled, setHasScrolled] = useState(false);
     const location = useLocation();
+
 
     // Check authentication status on component mount and when location changes
     useEffect(() => {
@@ -99,12 +103,11 @@ const Navbar = () => {
                                 {/* User Profile Button */}
                                 <button
                                     onClick={() => setShowProfileMenu(!showProfileMenu)}
-                                    className="flex items-center space-x-2 bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded-lg transition-colors"
+                                    className="hidden md:flex items-center space-x-2 text-black hover:text-gray-700 px-3 py-2 rounded-lg transition-colors"
                                 >
-                                    <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                    <div className="w-8 h-8 bg-gray-700 text-white rounded-full flex items-center justify-center text-sm font-bold">
                                         {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                                     </div>
-                                    <span className="hidden sm:block text-sm">{user?.username}</span>
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -112,32 +115,40 @@ const Navbar = () => {
 
                                 {/* Dropdown Menu */}
                                 {showProfileMenu && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                        <div className="px-4 py-2 border-b border-gray-100">
-                                            <p className="text-sm font-medium text-gray-900">{user?.username}</p>
-                                            <p className="text-sm text-gray-500">{user?.email}</p>
+                                    <div className="absolute right-0 mt-2 w-fit h-fit bg-white rounded-2xl shadow-2xl border border-gray-200 py-4 z-50 animate-fade-in">
+                                        {/* User Info */}
+                                        <div className="flex items-center px-6 pt-2 pb-4 border-b border-gray-100">
+                                            <div className="w-8 h-8 bg-gray-700 text-white rounded-full flex items-center justify-center text-sm font-bold mr-4">
+                                                {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-900">{user?.username}</p>
+                                                <p className="text-xs text-gray-500">{user?.email}</p>
+                                            </div>
                                         </div>
-                                        <Link
-                                            to="/profile"
-                                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                            onClick={() => setShowProfileMenu(false)}
-                                        >
-                                            👤 Profile
-                                        </Link>
-                                        <Link
-                                            to="/history"
-                                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                            onClick={() => setShowProfileMenu(false)}
-                                        >
-                                            📋 My Conversions
-                                        </Link>
-                                        <hr className="my-1" />
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                        >
-                                            🚪 Logout
-                                        </button>
+                                        <div className="py-2">
+                                            <Link
+                                                to="/profile"
+                                                className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-500 hover:text-white transition-colors text-base"
+                                                onClick={() => setShowProfileMenu(false)}
+                                            >
+                                                <span className="text-xs flex gap-2 items-center"><FaUser />View Profile</span>
+                                            </Link>
+                                            <Link
+                                                to="/history"
+                                                className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-500 hover:text-white transition-colors text-base"
+                                                onClick={() => setShowProfileMenu(false)}
+                                            >
+                                                <span className="text-xs flex gap-2 items-center"><GrPowerCycle />My Conversions</span>
+                                            </Link>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="flex items-center gap-3 w-full text-left py-3 px-6 text-base text-red-600 hover:bg-red-100 transition-colors"
+                                            >
+                                                <span className="text-xs flex gap-2 items-center"><PiSignOutFill />Sign Out</span> 
+                                            </button>
+                                        </div>
+                                    
                                     </div>
                                 )}
                             </div>
