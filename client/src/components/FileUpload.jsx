@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiUploadCloud, FiFile } from 'react-icons/fi';
+import { FiUploadCloud } from 'react-icons/fi';
 import { API_ENDPOINTS } from '../config/api';
 import { authUtils } from '../utils/auth';
 import Loader, { DotsLoader } from './Loader';
