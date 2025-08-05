@@ -233,7 +233,7 @@ const RegisterPage = () => {
                                         disabled={isLoading}
                                         className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        {isLoading ? <Loader /> : 'Create Account'}
+                                        Create Account
                                     </button>
                                 </div>
 
