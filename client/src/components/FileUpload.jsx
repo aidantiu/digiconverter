@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { FiUploadCloud, FiFile } from 'react-icons/fi';
 import { API_ENDPOINTS } from '../config/api';
 import { authUtils } from '../utils/auth';
 import Loader, { DotsLoader } from './Loader';
@@ -35,6 +36,7 @@ const FileUpload = () => {
     const [showSessionExpired, setShowSessionExpired] = useState(false);
     const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
     const [unsupportedFileInfo, setUnsupportedFileInfo] = useState({ fileName: '', detectedType: '' });
+    const [isDragOver, setIsDragOver] = useState(false);
 
     // Check upload limits on component mount
     useEffect(() => {
@@ -205,6 +207,38 @@ const FileUpload = () => {
         const videoUrl = URL.createObjectURL(videoFile);
         video.src = videoUrl;
         video.load();
+    };
+
+    // Drag and drop handlers
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        
+        const droppedFiles = e.dataTransfer.files;
+        if (droppedFiles.length > 0) {
+            const selectedFile = droppedFiles[0];
+            // Create a fake event object to use with existing handleFileChange
+            const fakeEvent = {
+                target: {
+                    files: [selectedFile],
+                    value: '' // This will be set by handleFileChange if needed
+                }
+            };
+            handleFileChange(fakeEvent);
+        }
     };
 
     const handleUpload = async () => {
@@ -431,7 +465,7 @@ const FileUpload = () => {
     }, [filePreview]);
 
     return (
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+        <div className="w-full max-w-3xl mx-auto bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10">
 
             {/* Authentication Status */}
             {isLoggedIn && showWelcomeMessage && (
@@ -481,20 +515,55 @@ const FileUpload = () => {
                 <div>
                     {!file && (
                         <>
-                            <label htmlFor="file" className="block text-lg font-semibold mb-4">
-                                📁 Select File to Convert
-                            </label>
-                            <input
-                                type="file"
-                                id="file"
-                                onChange={handleFileChange}
-                                accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
-                                disabled={isUploading}
-                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                            />
-                            <div className="mt-2 text-sm text-center">
-                                <p><strong>Supported formats:</strong></p>
-                                <p>📸 Images: JPEG, PNG, WebP | 🎬 Videos: MP4, MOV, WebM, MPG</p>
+                            {/* Modern Drag and Drop Upload Area */}
+                            <div
+                                className={`relative w-full p-12 border-3 border-dashed rounded-2xl transition-all duration-300 cursor-pointer group ${
+                                    isDragOver 
+                                        ? 'border-blue-400 bg-blue-50 scale-105' 
+                                        : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/50'
+                                } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                onClick={() => !isUploading && document.getElementById('file').click()}
+                            >
+                                <div className="flex flex-col items-center justify-center text-center space-y-6">
+                                    {/* Upload Icon */}
+                                    <div className={`transition-all duration-300 ${
+                                        isDragOver ? 'scale-110 text-blue-500' : 'text-gray-400 group-hover:text-blue-500'
+                                    }`}>
+                                        <FiUploadCloud size={64} />
+                                    </div>
+                                    
+                                    {/* Main Text */}
+                                    <div className="space-y-2">
+                                        <h3 className="text-2xl font-semibold text-gray-900">
+                                            {isDragOver ? 'Drop your file here' : 'Drop files to upload'}
+                                        </h3>
+                                        <p className="text-lg text-gray-600">
+                                            or <span className="text-blue-600 font-medium underline">browse files</span>
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Supported Formats */}
+                                    <div className="text-sm text-gray-500 space-y-1">
+                                        <p className="font-medium">Supported formats:</p>
+                                        <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
+                                            <span>📸 Images: JPEG, PNG, WebP</span>
+                                            <span>🎬 Videos: MP4, MOV, WebM, MPG</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Hidden file input */}
+                                <input
+                                    type="file"
+                                    id="file"
+                                    onChange={handleFileChange}
+                                    accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
+                                    disabled={isUploading}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                />
                             </div>
                         </>
                     )}
