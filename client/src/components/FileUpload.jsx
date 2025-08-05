@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
     };
 }
 
-const FileUpload = () => {
+const FileUpload = ({ onUploadLimits }) => {
     const [file, setFile] = useState(null);
     const [targetFormat, setTargetFormat] = useState('');
     const [uploadLimits, setUploadLimits] = useState(null);
@@ -72,13 +72,15 @@ const FileUpload = () => {
             if (!response.ok) {
                 console.error('Server response not OK:', response.status, response.statusText);
                 // Set default limits for anonymous users when server is not available
-                setUploadLimits({
+                const fallback = {
                     isAuthenticated: false,
                     limit: 3,
                     used: 0,
                     remaining: 3,
                     canUpload: true
-                });
+                };
+                setUploadLimits(fallback);
+                if (onUploadLimits) onUploadLimits(fallback);
                 return;
             }
             
@@ -86,28 +88,33 @@ const FileUpload = () => {
             if (!contentType || !contentType.includes('application/json')) {
                 console.error('Server did not return JSON, got:', contentType);
                 // Set default limits when server returns non-JSON
-                setUploadLimits({
+                const fallback = {
                     isAuthenticated: false,
                     limit: 3,
                     used: 0,
                     remaining: 3,
                     canUpload: true
-                });
+                };
+                setUploadLimits(fallback);
+                if (onUploadLimits) onUploadLimits(fallback);
                 return;
             }
             
             const data = await response.json();
             setUploadLimits(data);
+            if (onUploadLimits) onUploadLimits(data);
         } catch (error) {
             console.error('Error checking limits:', error);
             // Set default limits when there's an error
-            setUploadLimits({
+            const fallback = {
                 isAuthenticated: false,
                 limit: 3,
                 used: 0,
                 remaining: 3,
                 canUpload: true
-            });
+            };
+            setUploadLimits(fallback);
+            if (onUploadLimits) onUploadLimits(fallback);
         }
     };
 
@@ -431,43 +438,9 @@ const FileUpload = () => {
     }, [filePreview]);
 
     return (
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+        <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-8">
 
-            {/* Authentication Status */}
-            {isLoggedIn && showWelcomeMessage && (
-                <div className="bg-gradient-to-r from-green-100 to-green-50 border-2 border-green-200 rounded-xl p-6 mb-6">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                        <span className="text-lg">👋 Welcome back, <strong>{user?.username}</strong>!</span>
-                        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full font-semibold text-sm">
-                            🚀 Unlimited Uploads
-                        </div>
-                    </div>
-                </div>
-            )}
-            
-            {!isLoggedIn && (
-                <div className="bg-gradient-to-r from-orange-100 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                        <span className="text-lg">🎯 You're using anonymous mode</span>
-                        <Link to="/login" className="bg-purple-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-purple-700 transition-colors">
-                            🔐 Login for unlimited uploads
-                        </Link>
-                    </div>
-                </div>
-            )}
-            
-            {/* Upload Limits Info */}
-            {uploadLimits && !uploadLimits.unlimited && (
-                <div className={`rounded-lg p-4 mb-6 text-center ${uploadLimits.canUpload ? 'bg-green-100 border border-green-300 text-green-700' : 'bg-red-100 border border-red-300 text-red-700'}`}>
-                    <p className="mb-2">
-                        Anonymous uploads: {uploadLimits.used}/{uploadLimits.limit} used
-                        {uploadLimits.remaining > 0 
-                            ? ` (${uploadLimits.remaining} remaining)` 
-                            : ` (Resets at ${new Date(uploadLimits.resetTime).toLocaleString()})`
-                        }
-                    </p>
-                </div>
-            )}
+            {/* Upload Limits Info handled by AuthStatus in FileUploadPage */}
 
             {uploadLimits && uploadLimits.unlimited && showWelcomeMessage && (
                 <div className="bg-gradient-to-r from-teal-100 to-cyan-50 border-2 border-teal-200 rounded-lg p-4 mb-6 text-center text-teal-800">
