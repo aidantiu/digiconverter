@@ -21,7 +21,7 @@ function SupportedFormatsDropdown() {
     }, [open]);
 
     return (
-        <div className="relative flex flex-col items-center mb-4" ref={dropdownRef}>
+        <div className="relative flex flex-col items-center" ref={dropdownRef}>
             <button
                 className="flex items-center gap-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-300 transition-colors text-xs focus:outline-none"
                 onClick={() => setOpen(v => !v)}

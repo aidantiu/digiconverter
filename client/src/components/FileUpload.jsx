@@ -49,8 +49,7 @@ const FileUpload = ({ onUploadLimits }) => {
             const justLoggedIn = localStorage.getItem('justLoggedIn');
             if (justLoggedIn === 'true') {
                 setShowWelcomeMessage(true);
-                // Clear the flag so it doesn't show again
-                localStorage.removeItem('justLoggedIn');
+                // Don't clear the flag here - let FileUploadPage.jsx handle it
             }
         } else {
             setUser(null);
@@ -439,14 +438,6 @@ const FileUpload = ({ onUploadLimits }) => {
 
     return (
         <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-8">
-
-            {/* Upload Limits Info handled by AuthStatus in FileUploadPage */}
-
-            {uploadLimits && uploadLimits.unlimited && showWelcomeMessage && (
-                <div className="bg-gradient-to-r from-teal-100 to-cyan-50 border-2 border-teal-200 rounded-lg p-4 mb-6 text-center text-teal-800">
-                    <p>🚀 <strong>Unlimited uploads active!</strong> Convert as many files as you need.</p>
-                </div>
-            )}
 
             {/* File Upload */}
             <div className="space-y-6">

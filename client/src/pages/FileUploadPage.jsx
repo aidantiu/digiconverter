@@ -12,6 +12,9 @@ const FileUploadPage = () => {
     const [uploadLimits, setUploadLimits] = useState(null);
 
     useEffect(() => {
+        // Check for justLoggedIn flag first, before anything else
+        const justLoggedIn = localStorage.getItem('justLoggedIn') === 'true';
+        
         // Try to get user from localStorage
         const userString = localStorage.getItem('user');
         if (userString && userString !== 'undefined' && userString !== 'null') {
@@ -19,7 +22,13 @@ const FileUploadPage = () => {
                 const parsedUser = JSON.parse(userString);
                 setUser(parsedUser);
                 setIsLoggedIn(true);
-                setShowWelcomeMessage(true);
+                
+                // Show welcome message only if user just logged in
+                if (justLoggedIn) {
+                    setShowWelcomeMessage(true);
+                    // Clear the flag so it doesn't show again
+                    localStorage.removeItem('justLoggedIn');
+                }
             } catch {
                 setUser(null);
                 setIsLoggedIn(false);
@@ -29,6 +38,38 @@ const FileUploadPage = () => {
             setIsLoggedIn(false);
         }
     }, []);
+
+    // Auto-hide welcome only on navigation
+    useEffect(() => {
+        if (!showWelcomeMessage) return;
+
+        const hide = () => {
+            setShowWelcomeMessage(false);
+            cleanup();
+        };
+
+        const setup = () => {
+            // Only listen for navigation events
+            window.addEventListener('popstate', hide, { once: true });
+            window.addEventListener('beforeunload', hide, { once: true });
+        };
+
+        const cleanup = () => {
+            window.removeEventListener('popstate', hide);
+            window.removeEventListener('beforeunload', hide);
+        };
+
+        // Add a 3-second delay before enabling auto-hide listeners
+        // This prevents immediate hiding from page loading events
+        const delayTimer = setTimeout(() => {
+            setup();
+        }, 3000);
+
+        return () => {
+            clearTimeout(delayTimer);
+            cleanup();
+        };
+    }, [showWelcomeMessage]);
 
     // Handler to receive uploadLimits from FileUpload
     const handleUploadLimits = (limits) => {
@@ -48,7 +89,7 @@ const FileUploadPage = () => {
                         Convert your digicam images and videos to modern formats. Drag and drop or click below to get started.
                     </p>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center lg:justify-end w-full justify-center gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row items-center lg:justify-end justify-center gap-x-13 gap-y-5 w-full mb-4">
                     <AuthStatus isLoggedIn={isLoggedIn} user={user} showWelcomeMessage={showWelcomeMessage} uploadLimits={uploadLimits} />
                     <SupportedFormatsDropdown />
                 </div>
