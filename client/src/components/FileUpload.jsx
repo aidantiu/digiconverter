@@ -5,8 +5,13 @@ import { authUtils } from '../utils/auth';
 import Loader, { DotsLoader } from './Loader';
 import ProgressBar, { CircularProgress } from './ProgressBar';
 import SessionExpiredModal from './SessionExpiredModal';
-import ImageWithSpinner from './ImageWithSpinner';
 import UnsupportedFileModal from './UnsupportedFileModal';
+
+// Modular components
+import FileDropZone from './FileUpload/FileDropZone';
+import FileListItem from './FileUpload/FileListItem';
+import FormatSelector from './FileUpload/FormatSelector';
+import ConversionStatus from './FileUpload/ConversionStatus';
 
 // Debug function - add to window for manual cleanup
 if (typeof window !== 'undefined') {
@@ -38,18 +43,15 @@ const FileUpload = ({ onUploadLimits }) => {
 
     // Check upload limits on component mount
     useEffect(() => {
-        // Use quick auth status - no server validation on page load
         const authStatus = authUtils.getQuickAuthStatus();
         
         if (authStatus.authenticated) {
             setUser(authStatus.user);
             setIsLoggedIn(true);
             
-            // Show welcome message only if user just logged in
             const justLoggedIn = localStorage.getItem('justLoggedIn');
             if (justLoggedIn === 'true') {
                 setShowWelcomeMessage(true);
-                // Don't clear the flag here - let FileUploadPage.jsx handle it
             }
         } else {
             setUser(null);
@@ -59,6 +61,7 @@ const FileUpload = ({ onUploadLimits }) => {
         checkUploadLimits();
     }, []);
 
+    // Check upload limits
     const checkUploadLimits = async () => {
         try {
             const token = authUtils.getToken();
@@ -69,8 +72,6 @@ const FileUpload = ({ onUploadLimits }) => {
             });
             
             if (!response.ok) {
-                console.error('Server response not OK:', response.status, response.statusText);
-                // Set default limits for anonymous users when server is not available
                 const fallback = {
                     isAuthenticated: false,
                     limit: 3,
@@ -85,8 +86,6 @@ const FileUpload = ({ onUploadLimits }) => {
             
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                console.error('Server did not return JSON, got:', contentType);
-                // Set default limits when server returns non-JSON
                 const fallback = {
                     isAuthenticated: false,
                     limit: 3,
@@ -103,8 +102,7 @@ const FileUpload = ({ onUploadLimits }) => {
             setUploadLimits(data);
             if (onUploadLimits) onUploadLimits(data);
         } catch (error) {
-            console.error('Error checking limits:', error);
-            // Set default limits when there's an error
+            console.error('Error checking upload limits:', error);
             const fallback = {
                 isAuthenticated: false,
                 limit: 3,
@@ -117,319 +115,185 @@ const FileUpload = ({ onUploadLimits }) => {
         }
     };
 
-    const handleFileChange = (event) => {
-        const selectedFile = event.target.files[0];
-        
-        if (!selectedFile) {
-            setFile(null);
-            setFilePreview(null);
-            setPreviewType(null);
-            return;
-        }
+    // Handle file selection
+    const handleFileChange = async (e) => {
+        const selectedFile = e.target.files[0];
+        if (!selectedFile) return;
 
-        // Validate file type
-        const validation = validateFileType(selectedFile);
-        
+        // Validate file
+        const validation = validateFile(selectedFile);
         if (!validation.isValid) {
-            // Show unsupported file modal
-            setUnsupportedFileInfo({
-                fileName: selectedFile.name,
-                detectedType: validation.type
-            });
-            setShowUnsupportedModal(true);
-            
-            // Clear the file input
-            event.target.value = '';
-            setFile(null);
-            setFilePreview(null);
-            setPreviewType(null);
-            return;
-        }
-
-        // File is valid, proceed with setting it
-        setFile(selectedFile);
-
-        // Preview functionality for valid files
-        if (selectedFile.type.startsWith('image/')) {
-            // For images, use direct file URL
-            const objectUrl = URL.createObjectURL(selectedFile);
-            setFilePreview(objectUrl);
-            setPreviewType('image');
-        } else if (selectedFile.type.startsWith('video/')) {
-            // For videos, generate a thumbnail
-            generateVideoThumbnail(selectedFile);
-            setPreviewType('video');
-        } else {
-            setFilePreview(null);
-            setPreviewType(null);
-        }
-    };
-
-    // Function to generate thumbnail from video
-    const generateVideoThumbnail = (videoFile) => {
-        const video = document.createElement('video');
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        video.preload = 'metadata';
-        video.muted = true; // Required for autoplay in many browsers
-        
-        video.onloadedmetadata = () => {
-            // Set canvas dimensions to video dimensions
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            // Seek to 1 second or 10% of video duration, whichever is smaller
-            const seekTime = Math.min(1, video.duration * 0.1);
-            video.currentTime = seekTime;
-        };
-
-        video.onseeked = () => {
-            // Draw the video frame to canvas
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Convert canvas to blob and create object URL
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const thumbnailUrl = URL.createObjectURL(blob);
-                    setFilePreview(thumbnailUrl);
-                }
-            }, 'image/jpeg', 0.8);
-            
-            // Clean up
-            video.remove();
-        };
-
-        video.onerror = () => {
-            console.warn('Could not generate video thumbnail');
-            // Fallback to a default video icon
-            setFilePreview(null);
-            video.remove();
-        };
-
-        // Load the video file
-        const videoUrl = URL.createObjectURL(videoFile);
-        video.src = videoUrl;
-        video.load();
-    };
-
-    const handleUpload = async () => {
-        if (!file || !targetFormat) {
-            alert('Please select a file and target format');
-            return;
-        }
-
-        // Validate format compatibility
-        const imageFormats = getImageFormats();
-        const videoFormats = getVideoFormats();
-        
-        if (isImageFile && !imageFormats.includes(targetFormat)) {
-            alert('Invalid conversion: You can only convert images to supported image formats (JPEG, PNG, WebP)');
-            return;
-        }
-        
-        if (isVideoFile && !videoFormats.includes(targetFormat)) {
-            alert('Invalid conversion: You can only convert videos to supported video formats (MP4, MOV, WebM, MPG)');
-            return;
-        }
-
-        // Check if user can upload
-        if (uploadLimits && !uploadLimits.canUpload && !uploadLimits.unlimited) {
-            alert(`Upload limit reached. You have used ${uploadLimits.used}/${uploadLimits.limit} uploads. Try again after ${new Date(uploadLimits.resetTime).toLocaleString()}`);
-            return;
-        }
-
-        // If user appears logged in, validate session before uploading
-        if (isLoggedIn) {
-            const validation = await authUtils.validateForAction();
-            if (!validation.valid) {
-                if (validation.expired) {
-                    // Show session expired modal
-                    setShowSessionExpired(true);
-                    setUser(null);
-                    setIsLoggedIn(false);
-                    return;
-                } else {
-                    // Other validation error, clear auth silently
-                    authUtils.clearAuth();
-                    setUser(null);
-                    setIsLoggedIn(false);
-                    // Refresh upload limits for anonymous user
-                    checkUploadLimits();
-                }
+            if (validation.type === 'unsupported-video') {
+                setUnsupportedFileInfo({ 
+                    fileName: selectedFile.name, 
+                    detectedType: 'video' 
+                });
+                setShowUnsupportedModal(true);
             }
+            return;
+        }
+
+        setFile(selectedFile);
+        setTargetFormat('');
+        setConversionStatus(null);
+
+        // Create preview
+        const fileType = selectedFile.type.startsWith('image/') ? 'image' : 
+                        selectedFile.type.startsWith('video/') ? 'video' : null;
+        setPreviewType(fileType);
+
+        if (fileType === 'image') {
+            const reader = new FileReader();
+            reader.onload = (e) => setFilePreview(e.target.result);
+            reader.readAsDataURL(selectedFile);
+        } else if (fileType === 'video') {
+            const url = URL.createObjectURL(selectedFile);
+            setFilePreview(url);
+        }
+    };
+
+    // Validate file
+    const validateFile = (file) => {
+        const allowedTypes = [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+            'video/mp4', 'video/quicktime', 'video/webm', 'video/mpeg'
+        ];
+
+        if (allowedTypes.includes(file.type)) {
+            return { isValid: true };
+        }
+
+        // Check for unsupported video formats
+        const fileName = file.name.toLowerCase();
+        const fileExtension = fileName.split('.').pop();
+        const unsupportedVideoFormats = ['avi', 'wmv', 'flv', 'mkv', 'm4v', '3gp', 'asf'];
+        
+        if (unsupportedVideoFormats.includes(fileExtension) || file.type.startsWith('video/')) {
+            return { isValid: false, type: 'unsupported-video' };
+        }
+        
+        return { isValid: false, type: 'unknown' };
+    };
+
+    // Handle file upload
+    const handleUpload = async () => {
+        if (!file || !targetFormat) return;
+
+        if (!uploadLimits?.canUpload && !uploadLimits?.unlimited) {
+            setShowSessionExpired(true);
+            return;
         }
 
         setIsUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('targetFormat', targetFormat);
+        setIsConverting(false);
+        setConversionProgress(0);
 
         try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('targetFormat', targetFormat);
+
             const token = authUtils.getToken();
+            console.log('Uploading to:', API_ENDPOINTS.upload);
+            
             const response = await fetch(API_ENDPOINTS.upload, {
                 method: 'POST',
-                headers: {
-                    'Authorization': token ? `Bearer ${token}` : ''
-                },
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                 body: formData
             });
 
             if (!response.ok) {
-                console.error('Upload failed:', response.status, response.statusText);
-                alert(`Upload failed: ${response.status} ${response.statusText}`);
-                return;
-            }
-            
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                console.error('Upload endpoint did not return JSON, got:', contentType);
-                alert('Upload failed: Invalid server response');
-                return;
+                const errorText = await response.text();
+                console.error('Upload failed:', response.status, errorText);
+                throw new Error(`Upload failed: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('Non-JSON upload response:', responseText.substring(0, 200));
+                throw new Error('Server returned non-JSON response');
+            }
+
+            const result = await response.json();
+            console.log('Upload result:', result);
             
-            if (response.ok) {
-                setConversionStatus({ id: data.conversionId, status: 'processing' });
-                // Refresh upload limits
-                checkUploadLimits();
-                // Poll for status updates
-                pollConversionStatus(data.conversionId);
-                setIsConverting(true);
-                setConversionProgress(0);
+            // Set initial conversion status with the conversion ID
+            const initialStatus = {
+                ...result,
+                status: 'processing',
+                id: result.conversionId || result.id
+            };
+            setConversionStatus(initialStatus);
+            setIsUploading(false);
+            setIsConverting(true);
+
+            // Poll for conversion status - use conversionId from server response
+            const conversionId = result.conversionId || result.id;
+            if (conversionId) {
+                pollConversionStatus(conversionId);
             } else {
-                alert(data.message || 'Upload failed');
+                console.error('No conversion ID received from server');
+                setConversionStatus({ status: 'failed', error: 'No conversion ID received' });
+                setIsConverting(false);
             }
         } catch (error) {
             console.error('Upload error:', error);
-            alert(`Upload failed: ${error.message}`);
-        } finally {
+            setConversionStatus({ status: 'failed', error: error.message });
             setIsUploading(false);
         }
     };
 
+    // Poll for conversion status
     const pollConversionStatus = async (conversionId) => {
-        const poll = async () => {
-            try {
-                const response = await fetch(API_ENDPOINTS.status(conversionId));
-                
-                if (!response.ok) {
-                    console.error('Status check failed:', response.status, response.statusText);
-                    setConversionStatus(prev => ({ ...prev, status: 'failed' }));
-                    return;
-                }
-                
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    console.error('Status endpoint did not return JSON, got:', contentType);
-                    setConversionStatus(prev => ({ ...prev, status: 'failed' }));
-                    return;
-                }
-                
-                const data = await response.json();
-                setConversionStatus(data);
-                
-                // Update progress
-                if (data.progress !== undefined) {
-                    setConversionProgress(data.progress);
-                }
-                
-                if (data.status === 'processing') {
-                    setTimeout(poll, 2000); // Poll every 2 seconds
-                } else {
-                    // Conversion finished (completed or failed)
-                    setIsConverting(false);
-                    if (data.status === 'completed') {
-                        setConversionProgress(100);
-                        // Notify other components that a new conversion completed
-                        window.dispatchEvent(new CustomEvent('conversionCompleted', {
-                            detail: { conversionId: conversionId, status: data.status }
-                        }));
-                        // Also update localStorage timestamp for history refresh
-                        localStorage.setItem('lastConversionCompleted', Date.now().toString());
-                    }
-                }
-            } catch (error) {
-                console.error('Status check error:', error);
-                setConversionStatus(prev => ({ ...prev, status: 'failed' }));
-            }
-        };
-        poll();
-    };
-
-    const handleDownload = () => {
-        if (conversionStatus && conversionStatus.status === 'completed') {
-            window.open(API_ENDPOINTS.download(conversionStatus.id), '_blank');
-        }
-    };
-
-    const getImageFormats = () => ['jpeg', 'png', 'webp']; // Only supported image formats
-    const getVideoFormats = () => ['mp4', 'mov', 'webm', 'mpg']; // Only supported video formats
-
-    // Check if the file is an image or video based on its extension
-    const isImageFile = file && /\.(jpg|jpeg|png|webp)$/i.test(file.name);
-    const isVideoFile = file && /\.(mp4|mov|webm|mpeg|mpg)$/i.test(file.name);
-
-    // Function to validate file type and show appropriate modal
-    const validateFileType = (selectedFile) => {
-        const fileName = selectedFile.name;
-        const fileExtension = fileName.split('.').pop().toLowerCase();
-        
-        // Check for supported image formats
-        const supportedImageFormats = ['jpg', 'jpeg', 'png', 'webp'];
-        const supportedVideoFormats = ['mp4', 'mov', 'webm', 'mpeg', 'mpg'];
-        
-        // Check if it's a supported image
-        if (supportedImageFormats.includes(fileExtension)) {
-            return { isValid: true, type: 'image' };
-        }
-        
-        // Check if it's a supported video
-        if (supportedVideoFormats.includes(fileExtension)) {
-            return { isValid: true, type: 'video' };
-        }
-        
-        // Check if it's an unsupported image format
-        const unsupportedImageFormats = ['gif', 'bmp', 'tiff', 'svg', 'ico', 'tga'];
-        if (unsupportedImageFormats.includes(fileExtension) || selectedFile.type.startsWith('image/')) {
-            return { isValid: false, type: 'unsupported-image' };
-        }
-        
-        // Check if it's an unsupported video format
-        const unsupportedVideoFormats = ['avi', 'wmv', 'flv', 'mkv', 'm4v', '3gp', 'asf'];
-        if (unsupportedVideoFormats.includes(fileExtension) || selectedFile.type.startsWith('video/')) {
-            return { isValid: false, type: 'unsupported-video' };
-        }
-        
-        // Unknown file type
-        return { isValid: false, type: 'unknown' };
-    };
-    
-    // Function to safely get stored user (utility function)
-    const getStoredUser = () => {
         try {
-            const userString = localStorage.getItem('user');
+            const token = authUtils.getToken();
+            const statusUrl = API_ENDPOINTS.status(conversionId);
+            console.log('Polling status from:', statusUrl);
             
-            // Check if userString is null, undefined, empty, or the string 'undefined'/'null'
-            if (!userString || userString.trim() === '' || userString === 'undefined' || userString === 'null') {
-                return null;
+            const response = await fetch(statusUrl, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Status check failed:', response.status, errorText);
+                throw new Error(`Failed to check conversion status: ${response.status}`);
             }
-            
-            return JSON.parse(userString);
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('Non-JSON response received:', responseText.substring(0, 200));
+                throw new Error('Server returned non-JSON response');
+            }
+
+            const status = await response.json();
+            console.log('Conversion status:', status);
+            setConversionStatus(status);
+
+            if (status.progress !== undefined) {
+                setConversionProgress(status.progress);
+            }
+
+            if (status.status === 'processing') {
+                setTimeout(() => pollConversionStatus(conversionId), 2000);
+            } else {
+                setIsConverting(false);
+                if (status.status === 'completed') {
+                    checkUploadLimits(); // Refresh limits after successful conversion
+                }
+            }
         } catch (error) {
-            console.error('Error parsing stored user:', error);
-            // Clear corrupted user data
-            localStorage.removeItem('user');
-            localStorage.removeItem('authToken'); // Also clear token since user data is corrupted
-            return null;
+            console.error('Polling error:', error);
+            setConversionStatus({ status: 'failed', error: error.message });
+            setIsConverting(false);
         }
     };
 
     // Cleanup effect for file preview URLs
     useEffect(() => {
         return () => {
-            // Cleanup object URLs when component unmounts or file changes
             if (filePreview && filePreview.startsWith('blob:')) {
                 URL.revokeObjectURL(filePreview);
             }
@@ -438,212 +302,159 @@ const FileUpload = ({ onUploadLimits }) => {
 
     return (
         <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-8">
-
-            {/* File Upload */}
+            {/* File Upload Section */}
             <div className="space-y-6">
-                {/* File Input Section */}
-                <div>
-                    {!file && (
-                        <>
-                            <label htmlFor="file" className="block text-lg font-semibold mb-4">
-                                📁 Select File to Convert
-                            </label>
-                            <input
-                                type="file"
-                                id="file"
-                                onChange={handleFileChange}
-                                accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
-                                disabled={isUploading}
-                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                            />
-                            <div className="mt-2 text-sm text-center">
-                                <p><strong>Supported formats:</strong></p>
-                                <p>📸 Images: JPEG, PNG, WebP | 🎬 Videos: MP4, MOV, WebM, MPG</p>
-                            </div>
-                        </>
-                    )}
-                    
-                    {/* Hidden file input for changing files */}
-                    <input
-                        type="file"
-                        id="hidden-file"
-                        onChange={handleFileChange}
-                        accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
-                        disabled={isUploading}
-                        className="hidden"
+                {/* File Drop Zone - Show when no file is selected */}
+                {!file && (
+                    <FileDropZone 
+                        onFileChange={handleFileChange} 
+                        disabled={isUploading} 
                     />
-                        
-                        {file && (
-                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 relative">
-                                {/* Change File Button - Overlay */}
-                                <button
-                                    onClick={() => {
-                                        document.getElementById('hidden-file').click();
-                                    }}
-                                    disabled={isUploading}
-                                    className="absolute top-2 right-2 z-10 px-2 py-1 text-xs bg-white hover:bg-gray-50 text-gray-600 rounded-md transition-colors disabled:opacity-50 shadow-sm border border-gray-200"
-                                >
-                                    Change
-                                </button>
-                                
-                                <div className="flex items-start space-x-3">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium truncate">{file.name}</p>
-                                        <p className="text-sm mb-3">
-                                            {(file.size / (1024 * 1024)).toFixed(2)} MB
-                                        </p>
-                                        
-                                        {/* Thumbnail inside file info */}
-                                        {filePreview ? (
-                                            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto my-2 rounded-lg overflow-hidden border-2 border-gray-300 shadow-sm relative bg-white">
-                                                <ImageWithSpinner
-                                                    src={filePreview}
-                                                    alt="File thumbnail"
-                                                    className="w-full h-auto object-cover"
-                                                    spinnerSize="medium"
-                                                />
-                                            </div>
-                                        ) : file && previewType === 'video' ? (
-                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg border-2 border-gray-300 bg-gray-100 flex items-center justify-center mx-auto">
-                                                <DotsLoader message="" />
-                                            </div>
-                                        ) : (
-                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center mx-auto">
-                                                <span className="text-gray-400 text-xs text-center">No<br/>Preview</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                
-                {file && (
-                    <div className="space-y-4 mt-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
-                            <label className="text-lg font-semibold sm:whitespace-nowrap">🔄 Convert to:</label>
-                            <select
-                                value={targetFormat}
-                                onChange={(e) => setTargetFormat(e.target.value)}
-                                disabled={isUploading}
-                                className="flex-1 p-3 border border-gray-300 rounded-lg bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 disabled:opacity-50"
-                            >
-                                <option value="">Select format</option>
-                                {isImageFile && getImageFormats().map(format => (
-                                    <option key={format} value={format}>{format.toUpperCase()}</option>
-                                ))}
-                                {isVideoFile && getVideoFormats().map(format => (
-                                    <option key={format} value={format}>{format.toUpperCase()}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
                 )}
 
-                <button
-                    onClick={handleUpload}
-                    disabled={!file || !targetFormat || isUploading || (uploadLimits && !uploadLimits.canUpload && !uploadLimits.unlimited)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 disabled:hover:transform-none shadow-lg flex items-center justify-center mt-6 text-center"
-                >
-                    {isUploading ? (
-                        <div className="flex items-center">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Uploading...
-                        </div>
-                    ) : (
-                        '🚀 Convert File'
-                    )}
-                </button>
-                </div>
+                {/* Hidden file input for changing files */}
+                <input
+                    type="file"
+                    id="hidden-file"
+                    onChange={handleFileChange}
+                    accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.mpg,.mpeg"
+                    disabled={isUploading}
+                    className="hidden"
+                />
+
+                {/* Selected Files List */}
+                {file && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Selected Files</h3>
+                        
+                        <FileListItem
+                            file={file}
+                            filePreview={filePreview}
+                            previewType={previewType}
+                            onChangeFile={() => document.getElementById('hidden-file').click()}
+                            onRemoveFile={() => {
+                                setFile(null);
+                                setFilePreview(null);
+                                setPreviewType(null);
+                                setTargetFormat('');
+                                setConversionStatus(null);
+                            }}
+                            disabled={isUploading || isConverting}
+                        />
+
+                        {/* Format Selector */}
+                        <FormatSelector
+                            selectedFormat={targetFormat}
+                            onFormatChange={setTargetFormat}
+                            fileType={previewType}
+                            disabled={isUploading || isConverting}
+                        />
+
+                        {/* Convert Button */}
+                        {targetFormat && (
+                            <div className="flex flex-col items-center space-y-2">
+                                <button
+                                    onClick={handleUpload}
+                                    disabled={!uploadLimits?.canUpload && !uploadLimits?.unlimited || isUploading || isConverting}
+                                    className="px-8 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isUploading ? (
+                                        <>
+                                            <DotsLoader /> Uploading...
+                                        </>
+                                    ) : isConverting ? (
+                                        <>
+                                            <DotsLoader /> Converting...
+                                        </>
+                                    ) : (
+                                        '🔄 Convert File'
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Conversion Status */}
-            {conversionStatus && (
-                <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">Conversion Status</h3>
-                    
-                    {/* Progress Bar */}
-                    {isConverting && (
-                        <div className="mb-6">
-                            <ProgressBar 
-                                progress={conversionProgress}
-                                status={conversionStatus.status}
-                                showPercentage={true}
-                                height="h-3"
-                                animated={true}
-                            />
-                        </div>
-                    )}
-                    
-                    <p className="mb-4">
-                        Status: <span className={`font-semibold ${
-                            conversionStatus.status === 'processing' ? 'text-orange-600' :
-                            conversionStatus.status === 'completed' ? 'text-green-600' :
-                            conversionStatus.status === 'failed' ? 'text-red-600' : 'text-gray-600'
-                        }`}>
-                            {conversionStatus.status === 'processing' && '🔄 '}
-                            {conversionStatus.status === 'completed' && '✅ '}
-                            {conversionStatus.status === 'failed' && '❌ '}
-                            {conversionStatus.status.charAt(0).toUpperCase() + conversionStatus.status.slice(1)}
-                        </span>
-                    </p>
-                    
-                    {/* Debug Info */}
-                    {conversionStatus.id && (
-                        <p className="text-sm mb-3">
-                            <strong>Conversion ID:</strong> {conversionStatus.id}
-                        </p>
-                    )}
-                    
-                    {conversionStatus.status === 'completed' && (
-                        <button 
-                            onClick={handleDownload} 
-                            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                        >
-                            📥 Download Converted File
-                        </button>
-                    )}
-                    {conversionStatus.status === 'failed' && (
-                        <div className="space-y-3">
-                            <p className="text-red-600 font-semibold">❌ Conversion failed. Please try again.</p>
-                            <div className="bg-red-50 border border-red-200 rounded p-3">
-                                <p className="text-sm text-red-700 mb-2"><strong>Common issues:</strong></p>
-                                <ul className="text-sm text-red-600 list-disc list-inside space-y-1">
-                                    <li>For video conversions: FFmpeg must be installed on the server</li>
-                                    <li>Check if the target format is supported for your file type</li>
-                                    <li>File size might be too large</li>
-                                    <li>File might be corrupted</li>
-                                </ul>
-                                <button 
-                                    onClick={() => {
-                                        setConversionStatus(null);
-                                        setFile(null);
-                                        setTargetFormat('');
-                                    }}
-                                    className="mt-3 bg-red-600 text-white px-4 py-2 rounded font-medium hover:bg-red-700 transition-colors"
-                                >
-                                    🔄 Try Again
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+            <ConversionStatus
+                status={conversionStatus}
+                progress={conversionProgress}
+                onDownload={() => {
+                    // Construct download URL from conversion ID
+                    const conversionId = conversionStatus?.id || conversionStatus?.conversionId;
+                    if (conversionId) {
+                        const token = authUtils.getToken();
+                        const downloadUrl = API_ENDPOINTS.download(conversionId);
+                        
+                        console.log('Attempting download from:', downloadUrl);
+                        console.log('Conversion status:', conversionStatus);
+                        
+                        // If user is authenticated, include auth header using fetch
+                        if (token) {
+                            fetch(downloadUrl, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            })
+                            .then(async response => {
+                                if (!response.ok) {
+                                    // Try to get error message from server
+                                    const errorText = await response.text();
+                                    console.error('Download failed with status:', response.status);
+                                    console.error('Server error:', errorText);
+                                    throw new Error(`Download failed (${response.status}): ${errorText}`);
+                                }
+                                return response.blob();
+                            })
+                            .then(blob => {
+                                // Create download link
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${file?.name?.split('.')[0] || 'converted'}.${conversionStatus?.targetFormat || 'file'}`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                            })
+                            .catch(error => {
+                                console.error('Download error:', error);
+                                alert(`Download failed: ${error.message}`);
+                                // Fallback to direct link
+                                window.open(downloadUrl, '_blank');
+                            });
+                        } else {
+                            // For anonymous users, direct link works fine
+                            window.open(downloadUrl, '_blank');
+                        }
+                    } else {
+                        console.error('No conversion ID found for download');
+                        alert('No conversion ID found for download');
+                    }
+                }}
+                onTryAgain={() => {
+                    setConversionStatus(null);
+                    setFile(null);
+                    setFilePreview(null);
+                    setPreviewType(null);
+                    setTargetFormat('');
+                }}
+                fileName={file?.name}
+            />
 
-            {/* Session Expired Modal */}
+            {/* Modals */}
             <SessionExpiredModal
                 isOpen={showSessionExpired}
                 onClose={() => {
                     setShowSessionExpired(false);
-                    // Refresh upload limits for anonymous user
                     checkUploadLimits();
                 }}
                 onLogin={() => {
-                    // Optional callback for when user clicks login
                     localStorage.setItem('returnToUpload', 'true');
                 }}
             />
 
-            {/* Unsupported File Modal */}
             <UnsupportedFileModal
                 isOpen={showUnsupportedModal}
                 onClose={() => {

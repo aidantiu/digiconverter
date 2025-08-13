@@ -1,7 +1,6 @@
 import React from 'react';
 import FileUpload from '../components/FileUpload';
 import Navbar from '../components/Navbar';
-import SupportedFormatsDropdown from '../components/SupportedFormatsDropdown';
 import AuthStatus from '../components/AuthStatus';
 import { useState, useEffect } from 'react';
 
@@ -91,7 +90,6 @@ const FileUploadPage = () => {
                 </div>
                 <div className="flex flex-col sm:flex-row items-center lg:justify-end justify-center gap-5 w-full mb-4">
                     <AuthStatus isLoggedIn={isLoggedIn} user={user} showWelcomeMessage={showWelcomeMessage} uploadLimits={uploadLimits} />
-                    <SupportedFormatsDropdown/>
                 </div>
                 <div className="w-full flex justify-center">
                     <FileUpload onUploadLimits={handleUploadLimits} />

@@ -60,15 +60,25 @@ async function processImageConversion(fileBuffer, originalName, mimeType, target
             .toBuffer();
 
         // Update conversion record with file data
-        await Conversion.findByIdAndUpdate(conversionId, { 
+        console.log(`💾 Attempting to save converted data for ${conversionId}`);
+        console.log(`💾 ConvertedBuffer size: ${convertedBuffer?.length} bytes`);
+        console.log(`💾 ThumbnailBuffer size: ${thumbnailBuffer?.length} bytes`);
+        
+        const updateResult = await Conversion.findByIdAndUpdate(conversionId, { 
             progress: 100,
             convertedFileName: convertedFileName,
-            convertedData: convertedBuffer,
+            convertedFileData: convertedBuffer, // Fixed: was convertedData, should be convertedFileData
             convertedMimeType: convertedMimeType,
             thumbnailData: thumbnailBuffer,
             thumbnailMimeType: 'image/jpeg'
-        });
+        }, { new: true });
 
+        if (!updateResult) {
+            throw new Error(`Failed to find conversion record with ID: ${conversionId}`);
+        }
+
+        console.log(`✅ Database update successful for ${conversionId}`);
+        console.log(`✅ Saved convertedFileData: ${!!updateResult.convertedFileData} (${updateResult.convertedFileData?.length} bytes)`);
         console.log(`✅ Image conversion completed: ${convertedFileName}`);
         
         return {

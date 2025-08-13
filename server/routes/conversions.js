@@ -190,20 +190,29 @@ router.get('/download/:conversionId', async (req, res) => {
 
     // This endpoint allows users to download their converted file from database.
     try {
+        console.log(`📥 Download request for conversion ID: ${req.params.conversionId}`);
 
         // Find the conversion record by ID
         const conversion = await Conversion.findById(req.params.conversionId);
         if (!conversion) {
+            console.log(`❌ Conversion not found: ${req.params.conversionId}`);
             return res.status(404).json({ message: 'Conversion not found' });
         }
 
+        console.log(`📋 Conversion status: ${conversion.status}`);
+        console.log(`📋 Has convertedFileData: ${!!conversion.convertedFileData}`);
+        console.log(`📋 Has convertedFileName: ${!!conversion.convertedFileName}`);
+        console.log(`📋 ConvertedFileName: ${conversion.convertedFileName}`);
+
         // Check if the conversion is completed
         if (conversion.status !== 'completed') {
+            console.log(`❌ Conversion not completed yet, status: ${conversion.status}`);
             return res.status(400).json({ message: 'Conversion not completed yet' });
         }
 
         // Check if converted file data exists
-        if (!conversion.convertedData || !conversion.convertedFileName) {
+        if (!conversion.convertedFileData || !conversion.convertedFileName) {
+            console.log(`❌ Converted file not ready - Data: ${!!conversion.convertedFileData}, FileName: ${!!conversion.convertedFileName}`);
             return res.status(400).json({ message: 'Converted file not ready' });
         }
 
@@ -215,10 +224,12 @@ router.get('/download/:conversionId', async (req, res) => {
         const downloadFileName = `${path.parse(conversion.originalFileName).name}.${conversion.targetFormat}`;
         res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
         res.setHeader('Content-Type', conversion.convertedMimeType || 'application/octet-stream');
-        res.setHeader('Content-Length', conversion.convertedData.length);
+        res.setHeader('Content-Length', conversion.convertedFileData.length);
+
+        console.log(`📤 Sending file: ${downloadFileName} (${conversion.convertedFileData.length} bytes)`);
 
         // Send the file data
-        res.send(conversion.convertedData);
+        res.send(conversion.convertedFileData);
     } catch (error) {
         console.error('Download error:', error);
         res.status(500).json({ message: 'Server error during download' });

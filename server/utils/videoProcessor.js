@@ -130,7 +130,7 @@ async function processVideoConversion(fileBuffer, originalName, mimeType, target
                         progress: 100,
                         convertedFileName: convertedFileName,
                         convertedMimeType: convertedMimeType,
-                        convertedData: convertedBuffer,
+                        convertedFileData: convertedBuffer, 
                         thumbnailData: thumbnailBuffer,
                         thumbnailMimeType: 'image/jpeg'
                     });
