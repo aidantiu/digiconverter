@@ -369,7 +369,6 @@ const FileUpload = ({ onUploadLimits }) => {
                                 {(isConverting || conversionStatus?.status === 'processing') && (
                                     <div className="w-full lg:w-auto px-8 py-3 bg-orange-100 text-sm text-orange-700 font-semibold rounded-lg border border-orange-200">
                                         <span className="flex items-center justify-center lg:justify-start">
-                                            <DotsLoader />
                                             <span className="ml-2">Converting... {conversionProgress > 0 && `${conversionProgress}%`}</span>
                                         </span>
                                     </div>

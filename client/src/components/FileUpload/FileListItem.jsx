@@ -2,6 +2,7 @@ import React from 'react';
 import ImageWithSpinner from '../ImageWithSpinner';
 import { FaRegImages } from "react-icons/fa";
 import { CiVideoOn } from "react-icons/ci";
+import { MdDeleteOutline } from "react-icons/md";
 
 const FileListItem = ({ 
     file, 
@@ -71,7 +72,7 @@ const FileListItem = ({
                         disabled={disabled}
                         className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Remove
+                        <MdDeleteOutline className='w-4 h-4' />
                     </button>
                 </div>
             </div>
