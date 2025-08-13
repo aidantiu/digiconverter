@@ -89,9 +89,9 @@ const FileUploadPage = () => {
                         Convert your digicam images and videos to modern formats. Drag and drop or click below to get started.
                     </p>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center lg:justify-end justify-center gap-x-13 gap-y-5 w-full mb-4">
+                <div className="flex flex-col sm:flex-row items-center lg:justify-end justify-center gap-5 w-full mb-4">
                     <AuthStatus isLoggedIn={isLoggedIn} user={user} showWelcomeMessage={showWelcomeMessage} uploadLimits={uploadLimits} />
-                    <SupportedFormatsDropdown />
+                    <SupportedFormatsDropdown/>
                 </div>
                 <div className="w-full flex justify-center">
                     <FileUpload onUploadLimits={handleUploadLimits} />

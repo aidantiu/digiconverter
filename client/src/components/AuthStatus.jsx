@@ -1,4 +1,5 @@
-import React from 'react';
+import { PiUploadSimple } from "react-icons/pi";
+import { LiaUserSecretSolid } from "react-icons/lia";
 
 const AuthStatus = ({ isLoggedIn, user, showWelcomeMessage, uploadLimits }) => {
     const hasLimits = Boolean(uploadLimits);
@@ -9,45 +10,49 @@ const AuthStatus = ({ isLoggedIn, user, showWelcomeMessage, uploadLimits }) => {
     if (!showWelcomeChip && !isLimited) return null;
 
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 w-full">
             {showWelcomeChip && (
-                <div className="flex flex-col md:flex-col lg:flex-row w-full gap-5">
-                    <div className="rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm bg-blue-50">
+                <div className="flex flex-col md:flex-col lg:flex-row w-full gap-5 ">
+                    <div className="rounded-xl px-4 py-2.5 text-xs font-medium shadow-sm bg-blue-50">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <span className='text-sm'>Welcome back, <strong>{user?.username}</strong>!</span>
+                            <span className='text-xs text-center'>Welcome back, <strong>{user?.username}</strong>!</span>
                         </div>
                     </div>
 
                     <div className="flex sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl px-4 py-2.5 text-sm shadow-sm bg-purple-100">
-                        <span className='text-sm'>Unlimited Uploads! Convert as many as you want.</span>
+                        <span className='text-xs text-center'>Unlimited Uploads! Convert as many as you want.</span>
                     </div>
 
                 </div>
             )}
 
             {isLimited && (
-                <div className={`rounded-xl px-4 py-2 flex items-center gap-3 text-sm font-medium shadow-sm ${uploadLimits.canUpload ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                <div className="flex flex-col md:flex-row w-full gap-3 justify-start items-center">
                     {!isLoggedIn ? (
                         <>
-                            <span>🎯 You're using anonymous mode</span>
-                            <a href="/login" className="bg-purple-600 text-white px-3 py-1 rounded-full font-semibold text-xs hover:bg-purple-700 transition-colors">🔐 Login for unlimited uploads</a>
+                            {/* Anonymous mode message */}
+                            <div className="rounded-xl p-3 text-xs shadow-sm bg-orange-50 border border-orange-200 text-orange-700 w-full md:w-auto text-center">
+                                <span className="flex items-center justify-center"><LiaUserSecretSolid className="mr-1" />You're using anonymous mode</span>
+                            </div>
                         </>
                     ) : (
-                        <span>👤 {user?.username}</span>
+                        /* Logged in user */
+                        <div className="rounded-xl px-4 py-2 text-sm font-medium shadow-sm bg-blue-50 border border-blue-200 text-blue-700 w-full md:w-auto text-center">
+                            <span>👤 {user?.username}</span>
+                        </div>
                     )}
-                    <span className="ml-2">
-                        {uploadLimits.limit !== undefined && (
-                            <>
-                                <span>Uploads: {uploadLimits.used}/{uploadLimits.limit}</span>
-                                {uploadLimits.remaining > 0
-                                    ? ` (${uploadLimits.remaining} remaining)`
-                                    : uploadLimits.resetTime
-                                        ? ` (Resets at ${new Date(uploadLimits.resetTime).toLocaleString()})`
-                                        : ''
-                                }
-                            </>
-                        )}
-                    </span>
+                    
+                    {/* Upload limits */}
+                    {uploadLimits.limit !== undefined && (
+                        <div className={`rounded-xl p-3 text-xs font-medium shadow-sm w-full md:w-auto text-center ${uploadLimits.canUpload ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                            <PiUploadSimple className="inline-block mr-1" /> {uploadLimits.used}/{uploadLimits.limit}{uploadLimits.remaining > 0
+                                ? ` (${uploadLimits.remaining} remaining uploads)`
+                                : uploadLimits.resetTime
+                                    ? ` (Resets at ${new Date(uploadLimits.resetTime).toLocaleString()})`
+                                    : ''
+                            }
+                        </div>
+                    )}
                 </div>
             )}
         </div>
