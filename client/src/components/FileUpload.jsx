@@ -11,7 +11,6 @@ import UnsupportedFileModal from './UnsupportedFileModal';
 import FileDropZone from './FileUpload/FileDropZone';
 import FileListItem from './FileUpload/FileListItem';
 import FormatSelector from './FileUpload/FormatSelector';
-import ConversionStatus from './FileUpload/ConversionStatus';
 
 // Debug function - add to window for manual cleanup
 if (typeof window !== 'undefined') {
@@ -188,6 +187,7 @@ const FileUpload = ({ onUploadLimits }) => {
         setIsConverting(false);
         setConversionProgress(0);
 
+        
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -242,6 +242,7 @@ const FileUpload = ({ onUploadLimits }) => {
             setConversionStatus({ status: 'failed', error: error.message });
             setIsUploading(false);
         }
+
     };
 
     // Poll for conversion status
@@ -350,98 +351,148 @@ const FileUpload = ({ onUploadLimits }) => {
                             disabled={isUploading || isConverting}
                         />
 
-                        {/* Convert Button */}
+                        {/* Convert Button & Status Area */}
                         {targetFormat && (
-                            <div className="flex flex-col items-center space-y-2">
-                                <button
-                                    onClick={handleUpload}
-                                    disabled={!uploadLimits?.canUpload && !uploadLimits?.unlimited || isUploading || isConverting}
-                                    className="px-8 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isUploading ? (
-                                        <>
-                                            <DotsLoader /> Uploading...
-                                        </>
-                                    ) : isConverting ? (
-                                        <>
-                                            <DotsLoader /> Converting...
-                                        </>
-                                    ) : (
-                                        '🔄 Convert File'
-                                    )}
-                                </button>
+                            <div className="flex flex-col lg:flex-row items-center lg:items-center lg:justify-end space-y-2 lg:space-y-0 lg:space-x-4">
+                                {/* Show Convert Button only when not processing */}
+                                {!isUploading && !isConverting && conversionStatus?.status !== 'processing' && (
+                                    <button
+                                        onClick={handleUpload}
+                                        disabled={!uploadLimits?.canUpload && !uploadLimits?.unlimited}
+                                        className="w-full lg:w-auto px-8 py-3 bg-black text-sm text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Convert Now
+                                    </button>
+                                )}
+                                
+                                {/* Converting/Processing Status with Progress */}
+                                {(isConverting || conversionStatus?.status === 'processing') && (
+                                    <div className="w-full lg:w-auto px-8 py-3 bg-orange-100 text-sm text-orange-700 font-semibold rounded-lg border border-orange-200">
+                                        <span className="flex items-center justify-center lg:justify-start">
+                                            <DotsLoader />
+                                            <span className="ml-2">Converting... {conversionProgress > 0 && `${conversionProgress}%`}</span>
+                                        </span>
+                                    </div>
+                                )}
+                                
+                                {/* Success Confirmation & Download */}
+                                {conversionStatus?.status === 'completed' && (
+                                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-2 lg:space-y-0 lg:space-x-3 w-full lg:w-auto">
+                                        {/* Success Confirmation */}
+                                        <div className="flex-1 lg:flex-initial px-6 py-3 bg-green-100 text-sm text-green-700 font-semibold rounded-lg border border-green-200">
+                                            <span className="flex items-center justify-center lg:justify-start">
+                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                                </svg>
+                                                Conversion Successful!
+                                            </span>
+                                        </div>
+                                        
+                                        {/* Download Button */}
+                                        <button
+                                            onClick={() => {
+                                                // Construct download URL from conversion ID
+                                                const conversionId = conversionStatus?.id || conversionStatus?.conversionId;
+                                                if (conversionId) {
+                                                    const token = authUtils.getToken();
+                                                    const downloadUrl = API_ENDPOINTS.download(conversionId);
+                                                    
+                                                    console.log('Attempting download from:', downloadUrl);
+                                                    console.log('Conversion status:', conversionStatus);
+                                                    
+                                                    // If user is authenticated, include auth header using fetch
+                                                    if (token) {
+                                                        fetch(downloadUrl, {
+                                                            headers: {
+                                                                'Authorization': `Bearer ${token}`
+                                                            }
+                                                        })
+                                                        .then(async response => {
+                                                            if (!response.ok) {
+                                                                // Try to get error message from server
+                                                                const errorText = await response.text();
+                                                                console.error('Download failed with status:', response.status);
+                                                                console.error('Server error:', errorText);
+                                                                throw new Error(`Download failed (${response.status}): ${errorText}`);
+                                                            }
+                                                            return response.blob();
+                                                        })
+                                                        .then(blob => {
+                                                            // Create download link
+                                                            const url = window.URL.createObjectURL(blob);
+                                                            const a = document.createElement('a');
+                                                            a.href = url;
+                                                            a.download = `${file?.name?.split('.')[0] || 'converted'}.${conversionStatus?.targetFormat || 'file'}`;
+                                                            document.body.appendChild(a);
+                                                            a.click();
+                                                            window.URL.revokeObjectURL(url);
+                                                            document.body.removeChild(a);
+                                                        })
+                                                        .catch(error => {
+                                                            console.error('Download error:', error);
+                                                            alert(`Download failed: ${error.message}`);
+                                                            // Fallback to direct link
+                                                            window.open(downloadUrl, '_blank');
+                                                        });
+                                                    } else {
+                                                        // For anonymous users, direct link works fine
+                                                        window.open(downloadUrl, '_blank');
+                                                    }
+                                                } else {
+                                                    console.error('No conversion ID found for download');
+                                                    alert('No conversion ID found for download');
+                                                }
+                                            }}
+                                            className="flex-1 lg:flex-initial px-8 py-3 border-1 border-black bg-white text-sm text-black font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                                        >
+                                            <span className="flex items-center justify-center lg:justify-start">
+                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/>
+                                                </svg>
+                                                Download File
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {/* Failed Confirmation & Try Again */}
+                                {conversionStatus?.status === 'failed' && (
+                                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-2 lg:space-y-0 lg:space-x-3 w-full lg:w-auto">
+                                        {/* Failed Confirmation */}
+                                        <div className="flex-1 lg:flex-initial px-6 py-3 bg-red-100 text-sm text-red-700 font-semibold rounded-lg border border-red-200">
+                                            <span className="flex items-center justify-center lg:justify-start">
+                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                                                </svg>
+                                                Conversion Failed!
+                                            </span>
+                                        </div>
+                                        
+                                        {/* Try Again Button */}
+                                        <button
+                                            onClick={() => {
+                                                setConversionStatus(null);
+                                                setFile(null);
+                                                setFilePreview(null);
+                                                setPreviewType(null);
+                                                setTargetFormat('');
+                                            }}
+                                            className="flex-1 lg:flex-initial px-8 py-3 bg-red-600 text-sm text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            <span className="flex items-center justify-center lg:justify-start">
+                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd"/>
+                                                </svg>
+                                                Try Again
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
                 )}
             </div>
-
-            {/* Conversion Status */}
-            <ConversionStatus
-                status={conversionStatus}
-                progress={conversionProgress}
-                onDownload={() => {
-                    // Construct download URL from conversion ID
-                    const conversionId = conversionStatus?.id || conversionStatus?.conversionId;
-                    if (conversionId) {
-                        const token = authUtils.getToken();
-                        const downloadUrl = API_ENDPOINTS.download(conversionId);
-                        
-                        console.log('Attempting download from:', downloadUrl);
-                        console.log('Conversion status:', conversionStatus);
-                        
-                        // If user is authenticated, include auth header using fetch
-                        if (token) {
-                            fetch(downloadUrl, {
-                                headers: {
-                                    'Authorization': `Bearer ${token}`
-                                }
-                            })
-                            .then(async response => {
-                                if (!response.ok) {
-                                    // Try to get error message from server
-                                    const errorText = await response.text();
-                                    console.error('Download failed with status:', response.status);
-                                    console.error('Server error:', errorText);
-                                    throw new Error(`Download failed (${response.status}): ${errorText}`);
-                                }
-                                return response.blob();
-                            })
-                            .then(blob => {
-                                // Create download link
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `${file?.name?.split('.')[0] || 'converted'}.${conversionStatus?.targetFormat || 'file'}`;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(url);
-                                document.body.removeChild(a);
-                            })
-                            .catch(error => {
-                                console.error('Download error:', error);
-                                alert(`Download failed: ${error.message}`);
-                                // Fallback to direct link
-                                window.open(downloadUrl, '_blank');
-                            });
-                        } else {
-                            // For anonymous users, direct link works fine
-                            window.open(downloadUrl, '_blank');
-                        }
-                    } else {
-                        console.error('No conversion ID found for download');
-                        alert('No conversion ID found for download');
-                    }
-                }}
-                onTryAgain={() => {
-                    setConversionStatus(null);
-                    setFile(null);
-                    setFilePreview(null);
-                    setPreviewType(null);
-                    setTargetFormat('');
-                }}
-                fileName={file?.name}
-            />
 
             {/* Modals */}
             <SessionExpiredModal

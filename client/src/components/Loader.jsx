@@ -69,13 +69,13 @@ export const DotsLoader = ({ message = 'Loading...', fullScreen = false }) => {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center p-8">
-            <div className="flex space-x-2 justify-center items-center">
+        <div className="flex flex-col items-center justify-center">
+            <div className="flex space-x-2 justify-center items-center p-2">
                 <div className="h-3 w-3 bg-purple-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="h-3 w-3 bg-purple-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="h-3 w-3 bg-purple-600 rounded-full animate-bounce"></div>
+                <div className="h-3 w-3 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="h-3 w-3 bg-orange-600 rounded-full animate-bounce"></div>
             </div>
-            <p className="mt-4 text-gray-600 font-medium">{message}</p>
+            <p className=" text-xs font-medium">{message}</p>
         </div>
     );
 };
