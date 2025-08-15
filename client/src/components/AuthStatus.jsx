@@ -22,7 +22,6 @@ const AuthStatus = ({ isLoggedIn, user, showWelcomeMessage, uploadLimits }) => {
                     <div className="flex sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl px-4 py-2.5 text-sm shadow-sm bg-purple-100">
                         <span className='text-xs text-center'>Unlimited Uploads! Convert as many as you want.</span>
                     </div>
-
                 </div>
             )}
 
@@ -31,20 +30,20 @@ const AuthStatus = ({ isLoggedIn, user, showWelcomeMessage, uploadLimits }) => {
                     {!isLoggedIn ? (
                         <>
                             {/* Anonymous mode message */}
-                            <div className="rounded-xl p-3 text-xs shadow-sm bg-orange-50 border border-orange-200 text-orange-700 w-full md:w-auto text-center">
+                            <div className="rounded-xl p-3 text-xs shadow-sm bg-orange-50 border border-orange-200 text-orange-700 w-full text-center">
                                 <span className="flex items-center justify-center"><LiaUserSecretSolid className="mr-1" />You're using anonymous mode</span>
                             </div>
                         </>
                     ) : (
                         /* Logged in user */
-                        <div className="rounded-xl px-4 py-2 text-sm font-medium shadow-sm bg-blue-50 border border-blue-200 text-blue-700 w-full md:w-auto text-center">
+                        <div className="rounded-xl px-4 py-2 text-sm font-medium shadow-sm bg-blue-50 border border-blue-200 text-blue-700 w-full text-center">
                             <span>👤 {user?.username}</span>
                         </div>
                     )}
                     
                     {/* Upload limits */}
                     {uploadLimits.limit !== undefined && (
-                        <div className={`rounded-xl p-3 text-xs font-medium shadow-sm w-full md:w-auto text-center ${uploadLimits.canUpload ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                        <div className={`rounded-xl p-3 text-xs font-medium shadow-sm w-full text-center ${uploadLimits.canUpload ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
                             <PiUploadSimple className="inline-block mr-1" /> {uploadLimits.used}/{uploadLimits.limit}{uploadLimits.remaining > 0
                                 ? ` (${uploadLimits.remaining} remaining uploads)`
                                 : uploadLimits.resetTime
