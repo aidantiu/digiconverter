@@ -124,31 +124,21 @@ function LoginPage() {
     return (
         <div className="min-h-screen bg-gray-50">
             <Navbar />
-            <div className="flex w-full justify-between max-w-7xl mx-auto px-4 py-10">
-                {/* Left: Quote/Brand Panel */}
-                <div className="flex w-1/2 items-center">
-                    <div className="flex-col ml-20 ">
-                        <FaCameraRetro className='w-15 h-15 my-8 ml-5'/>
-                        <blockquote className="font-bold text-xl w-3/4 mb-4 text-black">
-                            “You don’t take a photograph. You make it.”
-                        </blockquote>
-                        <figcaption className="ml-2 text-lg text-gray-500 mt-1">— Ansel Adams</figcaption>
-                    </div>
-                </div>
-                {/* Right: Login Form Panel */}
-                <div className="flex w-1/2 ">
-                    <div className="flex items-center justify-center w-full py-8 px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row w-full max-w-7xl mx-auto px-4 py-10 gap-10 lg:gap-0">
+    
+                <div className="order-1 lg:order-2 w-full lg:w-1/2 flex">
+                    <div className="flex items-center justify-center w-full py-4 sm:py-8 px-2 sm:px-6 lg:px-8">
                         <div className="max-w-md w-full space-y-8">
                             <div>
-                                <h2 className="mt-6 text-center text-3xl font-bold text-black">
+                                <h2 className="mt-2 text-center text-3xl font-bold text-black">
                                     Login to your account
                                 </h2>
                                 <p className="mt-2 text-center text-sm text-gray-600">
                                     Welcome back to <span className="text-md text-black">DigiConverter</span>!
                                 </p>
                             </div>
-                            <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                                <div className="px-8 py-2 ">
+                            <form className="mt-4 space-y-6" onSubmit={handleSubmit}>
+                                <div className="px-2 sm:px-4 py-2">
                                     {error && (
                                         <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                                             {error}
@@ -194,12 +184,12 @@ function LoginPage() {
                                             disabled={isLoading}
                                             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            Login
+                                            {isLoading ? 'Logging in...' : 'Login'}
                                         </button>
                                     </div>
                                     <div className="relative">
                                         <div className="absolute inset-0 flex items-center">
-                                            <div className="w-full border-t border-gray-300"></div>
+                                            <div className="w-full border-t border-gray-300" />
                                         </div>
                                         <div className="relative flex justify-center text-sm">
                                             <span className="px-2 bg-white text-gray-500">Don't have an account?</span>
@@ -216,6 +206,17 @@ function LoginPage() {
                                 </div>
                             </form>
                         </div>
+                    </div>
+                </div>
+
+                {/* Brand / Quote Panel: second on mobile, left on desktop */}
+                <div className="order-2 lg:order-1 w-full lg:w-1/2 flex items-center">
+                    <div className="flex flex-col mx-auto lg:ml-20 text-center lg:text-left max-w-md">
+                        <FaCameraRetro className='w-16 h-16 my-4 mx-auto lg:mx-0 text-black' />
+                        <blockquote className="font-bold text-xl sm:text-2xl mb-4 text-black">
+                            “You don’t take a photograph. You make it.”
+                        </blockquote>
+                        <figcaption className="text-lg text-gray-500">— Ansel Adams</figcaption>
                     </div>
                 </div>
             </div>

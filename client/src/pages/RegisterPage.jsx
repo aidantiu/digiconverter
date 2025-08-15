@@ -106,166 +106,82 @@ const RegisterPage = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <Navbar />
-            
-            <div className=" flex w-full justify-between max-w-7xl mx-auto px-4">
-                <div className="flex w-1/2 items-center">
-                    <div className="flex-col ml-20 ">
-                        <FaCameraRetro className='w-15 h-15 my-8 ml-5'/>
-                        <blockquote className="font-bold text-xl w-3/4 mb-4 text-black">
-                            “A good snapshot keeps a moment from running away.”
-                        </blockquote>
-                        <figcaption className="ml-2 text-lg text-gray-500 mt-1">— Eudora Welty</figcaption>
-                    </div>  
-                </div>
-                <div className="flex w-1/2 ">
-                    <div className="flex items-center justify-center w-full py-8 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md w-full space-y-8">
-                        <div>
-                            <h2 className="mt-6 text-center text-3xl font-bold text-black">
-                                Create your account
-                            </h2>
-                            <p className="mt-2 text-center text-sm text-gray-600">
-                                Join <span className="text-md text-black">DigiConverter</span> and showcase your memories!
-                            </p>
-                        </div>
-                        
-                        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                            <div className="px-8 py-2 ">
-                                {errors.general && (
-                                    <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                                        {errors.general}
-                                    </div>
-                                )}
-                                
-                                <div className="space-y-4">
-                                    <div>
-                                        <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                                            Username
-                                        </label>
-                                        <input
-                                            id="username"
-                                            name="username"
-                                            type="text"
-                                            autoComplete="username"
-                                            required
-                                            value={formData.username}
-                                            onChange={handleChange}
-                                            className={`mt-1 block w-full px-4 py-3 border ${
-                                                errors.username ? 'border-red-300' : 'border-gray-300'
-                                            } rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`}
-                                            placeholder="Enter your username"
-                                        />
-                                        {errors.username && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.username}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                            Email address
-                                        </label>
-                                        <input
-                                            id="email"
-                                            name="email"
-                                            type="email"
-                                            autoComplete="email"
-                                            required
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            className={`mt-1 block w-full px-4 py-3 border ${
-                                                errors.email ? 'border-red-300' : 'border-gray-300'
-                                            } rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`}
-                                            placeholder="Enter your email"
-                                        />
-                                        {errors.email && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                                            Password
-                                        </label>
-                                        <input
-                                            id="password"
-                                            name="password"
-                                            type="password"
-                                            autoComplete="new-password"
-                                            required
-                                            value={formData.password}
-                                            onChange={handleChange}
-                                            className={`mt-1 block w-full px-4 py-3 border ${
-                                                errors.password ? 'border-red-300' : 'border-gray-300'
-                                            } rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`}
-                                            placeholder="Enter your password"
-                                        />
-                                        {errors.password && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                                            Confirm Password
-                                        </label>
-                                        <input
-                                            id="confirmPassword"
-                                            name="confirmPassword"
-                                            type="password"
-                                            autoComplete="new-password"
-                                            required
-                                            value={formData.confirmPassword}
-                                            onChange={handleChange}
-                                            className={`mt-1 block w-full px-4 py-3 border ${
-                                                errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                                            } rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`}
-                                            placeholder="Confirm your password"
-                                        />
-                                        {errors.confirmPassword && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-                                        )}
-                                    </div>
-                                </div>
-                                
-                                <div className="my-6">
-                                    <button
-                                        type="submit"
-                                        disabled={isLoading}
-                                        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        Create Account
-                                    </button>
-                                </div>
-
-                               <div class="relative">
-                                    <div class="absolute inset-0 flex items-center">
-                                        <div class="w-full border-t border-gray-300">
+         
+            <div className="flex flex-col lg:flex-row w-full justify-between max-w-7xl mx-auto px-4 py-10 gap-10 lg:gap-0">
+                <div className="order-1 lg:order-2 w-full lg:w-1/2 flex">
+                    <div className="flex items-center justify-center w-full py-6 px-2 sm:px-6 lg:px-8">
+                        <div className="max-w-md w-full space-y-8">
+                            <div>
+                                <h2 className="mt-2 text-center text-3xl font-bold text-black">
+                                    Create your account
+                                </h2>
+                                <p className="mt-2 text-center text-sm text-gray-600">
+                                    Join <span className="text-md text-black">DigiConverter</span> and showcase your memories!
+                                </p>
+                            </div>
+                            <form className="mt-4 space-y-6" onSubmit={handleSubmit}>
+                                <div className="px-2 sm:px-4 py-2">
+                                    {errors.general && (
+                                        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                                            {errors.general}
+                                        </div>
+                                    )}
+                                    <div className="space-y-4">
+                                        {/* Username */}
+                                        <div>
+                                            <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
+                                            <input id="username" name="username" type="text" autoComplete="username" required value={formData.username} onChange={handleChange} className={`mt-1 block w-full px-4 py-3 border ${errors.username ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} placeholder="Enter your username" />
+                                            {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username}</p>}
+                                        </div>
+                                        {/* Email */}
+                                        <div>
+                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
+                                            <input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleChange} className={`mt-1 block w-full px-4 py-3 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} placeholder="Enter your email" />
+                                            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+                                        </div>
+                                        {/* Password */}
+                                        <div>
+                                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                                            <input id="password" name="password" type="password" autoComplete="new-password" required value={formData.password} onChange={handleChange} className={`mt-1 block w-full px-4 py-3 border ${errors.password ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} placeholder="Enter your password" />
+                                            {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+                                        </div>
+                                        {/* Confirm Password */}
+                                        <div>
+                                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
+                                            <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required value={formData.confirmPassword} onChange={handleChange} className={`mt-1 block w-full px-4 py-3 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} placeholder="Confirm your password" />
+                                            {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
                                         </div>
                                     </div>
-                                    
-                                    <div class="relative flex justify-center text-sm">
-                                        <span class="px-2 bg-white text-gray-500">Already have an account?</span>
+                                    <div className="my-6">
+                                        <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            {isLoading ? 'Creating...' : 'Create Account'}
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
+                                        <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Already have an account?</span></div>
+                                    </div>
+                                    <div className="mt-6">
+                                        <Link to="/login" className="w-full flex justify-center py-3 px-4 border border-black rounded-xl shadow-sm text-sm font-medium text-black bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors">Sign in to your account</Link>
                                     </div>
                                 </div>
-
-                                <div className="mt-6">
-                                    <Link
-                                        to="/login"
-                                        className="w-full flex justify-center py-3 px-4 border border-black rounded-xl shadow-sm text-sm font-medium text-black bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors"
-                                    >
-                                        Sign in to your account
-                                    </Link>
-                                </div>
-
-                            </div>
-                        </form>
+                            </form>
                         </div>
                     </div>
                 </div>
-                
+                {/* Quote Panel: second on mobile, left on desktop */}
+                <div className="order-2 lg:order-1 w-full lg:w-1/2 flex items-center">
+                    <div className="flex flex-col mx-auto lg:ml-20 text-center lg:text-left max-w-md">
+                        <FaCameraRetro className='w-16 h-16 my-4 mx-auto lg:mx-0 text-black' />
+                        <blockquote className="font-bold text-xl sm:text-2xl mb-4 text-black">
+                            “A good snapshot keeps a moment from running away.”
+                        </blockquote>
+                        <figcaption className="text-lg text-gray-500">— Eudora Welty</figcaption>
+                    </div>
+                </div>
             </div>
         </div>
     );
-};
+}
 
 export default RegisterPage;
