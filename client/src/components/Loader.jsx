@@ -58,9 +58,9 @@ export const DotsLoader = ({ message = 'Loading...', fullScreen = false }) => {
             <div className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="text-center">
                     <div className="flex space-x-2 justify-center items-center">
-                        <div className="h-3 w-3 bg-purple-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="h-3 w-3 bg-purple-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="h-3 w-3 bg-purple-600 rounded-full animate-bounce"></div>
+                        <div className="h-3 w-3 bg-black rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="h-3 w-3 bg-black rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="h-3 w-3 bg-black rounded-full animate-bounce"></div>
                     </div>
                     <p className="mt-4 text-gray-600 font-medium">{message}</p>
                 </div>
@@ -85,7 +85,7 @@ export const PageLoader = ({ message = 'Loading page...', minHeight = 'min-h-scr
     return (
         <div className={`${minHeight} bg-gray-50 flex items-center justify-center`}>
             <div className="text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">{message}</p>
                 <p className="text-sm text-gray-500 mt-2">Please wait while we load your content</p>
             </div>
