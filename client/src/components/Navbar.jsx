@@ -196,7 +196,7 @@ const Navbar = () => {
                                 onClick={() => setShowMobileMenu(false)}
                                 className={`font-medium transition-colors px-2 py-1 ${
                                     isActiveLink('/upload') 
-                                        ? 'text-gray-600 bg-purple-50 rounded' 
+                                        ? 'text-black' 
                                         : 'text-gray-600 hover:text-black'
                                 }`}
                             >
@@ -207,8 +207,8 @@ const Navbar = () => {
                                 onClick={() => setShowMobileMenu(false)}
                                 className={`font-medium transition-colors px-2 py-1 ${
                                     isActiveLink('/history') 
-                                        ? 'text-purple-600 bg-purple-50 rounded' 
-                                        : 'text-gray-600 hover:text-purple-600'
+                                        ? 'text-black' 
+                                        : 'text-gray-600 hover:text-black'
                                 }`}
                             >
                                 History
@@ -218,9 +218,9 @@ const Navbar = () => {
                             
                             {isLoggedIn ? (
                                 <div className="space-y-3">
-                                    <div className="px-2 py-2 bg-purple-50 rounded">
+                                    <div className="px-2 py-2 bg-gray-100 rounded">
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                            <div className="w-8 h-8 bg-gray-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                                                 {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                                             </div>
                                             <div>
@@ -232,7 +232,7 @@ const Navbar = () => {
                                     <Link
                                         to="/profile"
                                         onClick={() => setShowMobileMenu(false)}
-                                        className="block px-2 py-1 text-gray-700 hover:text-purple-600 font-medium"
+                                        className="block px-2 py-1 text-gray-700 hover:text-black font-medium"
                                     >
                                         Profile
                                     </Link>
@@ -248,14 +248,14 @@ const Navbar = () => {
                                     <Link 
                                         to="/register" 
                                         onClick={() => setShowMobileMenu(false)}
-                                        className="block px-2 py-1 text-gray-600 hover:text-purple-600 font-medium"
+                                        className="block px-2 py-1 text-gray-600 hover:text-black font-medium"
                                     >
                                         Register
                                     </Link>
                                     <Link 
                                         to="/login" 
                                         onClick={() => setShowMobileMenu(false)}
-                                        className="block bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium text-center transition-colors"
+                                        className="block bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-medium text-center transition-colors"
                                     >
                                         Login
                                     </Link>
