@@ -1,5 +1,6 @@
 import { PiUploadSimple } from "react-icons/pi";
 import { LiaUserSecretSolid } from "react-icons/lia";
+import { FaUser } from "react-icons/fa";
 
 const AuthStatus = ({ isLoggedIn, user, showWelcomeMessage, uploadLimits }) => {
     const hasLimits = Boolean(uploadLimits);
@@ -13,14 +14,14 @@ const AuthStatus = ({ isLoggedIn, user, showWelcomeMessage, uploadLimits }) => {
         <div className="flex flex-col gap-2 w-full">
             {showWelcomeChip && (
                 <div className="flex flex-col md:flex-col lg:flex-row w-full gap-5 ">
-                    <div className="rounded-xl px-4 py-2.5 text-xs font-medium shadow-sm bg-blue-50">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <span className='text-xs text-center'>Welcome back, <strong>{user?.username}</strong>!</span>
+                    <div className="rounded-xl px-4 py-2.5 text-xs font-medium shadow-sm bg-blue-50 w-full text-center">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2">
+                            <span className='text-xs text-center flex items-center justify-center'><FaUser className="mr-2"/> Welcome back, <strong> {user?.username}</strong>!</span>
                         </div>
                     </div>
 
-                    <div className="flex sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl px-4 py-2.5 text-sm shadow-sm bg-purple-100">
-                        <span className='text-xs text-center'>Unlimited Uploads! Convert as many as you want.</span>
+                    <div className="rounded-xl px-4 py-2.5 text-xs font-medium shadow-sm bg-purple-100 w-full text-center">
+                        <span className='text-xs text-center block'>Unlimited Uploads! Convert as many as you want.</span>
                     </div>
                 </div>
             )}
