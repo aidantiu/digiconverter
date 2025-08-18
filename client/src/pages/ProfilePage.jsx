@@ -44,7 +44,14 @@ const ProfilePage = () => {
 
             if (response.ok) {
                 const stats = await response.json();
-                setConversionStats(stats);
+                console.log('Stats response:', stats); // Add this for debugging
+                setConversionStats({
+                    total: stats.totalConversions || 0,
+                    thisMonth: stats.monthlyConversions || 0,
+                    formats: []
+                });
+            } else {
+                console.error('Failed to fetch stats:', response.status, response.statusText);
             }
         } catch (error) {
             console.error('Error loading conversion stats:', error);
@@ -131,7 +138,7 @@ const ProfilePage = () => {
                                             <dt className="text-sm font-medium text-gray-500">Member Since</dt>
                                             <dd className="mt-1 text-sm text-gray-900">
                                                 {new Date(user.createdAt || Date.now()).toLocaleDateString()}
-                                            </dd>
+                                            </dd>s
                                         </div>
                                     </dl>
                                 </div>

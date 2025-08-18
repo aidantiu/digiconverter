@@ -2,7 +2,7 @@ const { express } = require('../utils/dependencies');
 const multer = require('multer');
 const path = require('path');
 const { Conversion } = require('../model/models');
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { checkUploadLimit } = require('../middleware/uploadLimit');
 const { convertFile } = require('../utils/conversionProcessor');
 
@@ -523,6 +523,31 @@ router.post('/fix-stuck-conversions', async (req, res) => {
     } catch (error) {
         console.error('Fix stuck conversions error:', error);
         res.status(500).json({ message: 'Server error fixing stuck conversions' });
+    }
+});
+
+// Get conversion statistics (total conversions and for this month for the authenticated user)
+router.get('/stats', requireAuth, async (req, res) => {
+    try {
+        // Only authenticated users can access this endpoint
+        const query = { userId: req.user._id };
+
+        // Get total conversions for this user
+        const totalConversions = await Conversion.countDocuments(query);
+
+        // Get conversions for this month for this user
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const monthlyQuery = { ...query, createdAt: { $gte: startOfMonth } };
+        const monthlyConversions = await Conversion.countDocuments(monthlyQuery);
+
+        res.status(200).json({
+            totalConversions,
+            monthlyConversions,
+            message: 'User conversion statistics retrieved successfully'
+        });
+    } catch (error) {
+        console.error('Statistics error:', error);
+        res.status(500).json({ message: 'Server error retrieving statistics' });
     }
 });
 
