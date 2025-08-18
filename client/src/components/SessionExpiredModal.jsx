@@ -26,7 +26,7 @@ const SessionExpiredModal = ({ isOpen, onClose, onLogin }) => {
 
                     {/* Title */}
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                        ⏰ Session Expired
+                        Session Expired
                     </h3>
 
                     {/* Message */}
@@ -36,16 +36,16 @@ const SessionExpiredModal = ({ isOpen, onClose, onLogin }) => {
 
                 
                     {/* Action buttons */}
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 items-center">
                         <Link
                             to="/login"
-                            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 text-center"
+                            className="flex-1 bg-white text-black border-1 border-black px-6 py-3 rounded-lg font-semibold hover:scale-1 transition-all duration-200 text-center"
                             onClick={() => {
                                 if (onLogin) onLogin();
                                 onClose();
                             }}
                         >
-                            🔐 Login Again
+                            Login Again
                         </Link>
                         <button
                             onClick={onClose}

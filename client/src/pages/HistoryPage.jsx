@@ -192,7 +192,7 @@ const HistoryPage = () => {
         return (
             <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 {/* Thumbnail/Icon Section */}
-                <div className="h-48 bg-gradient-to-br from-purple-100 to-pink-100 relative overflow-hidden flex items-center justify-center">
+                <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden flex items-center justify-center">
                     {thumbnailUrl && !thumbnailError && conversion.status === 'completed' ? (
                         <ThumbnailWithSpinner
                             src={thumbnailUrl}
@@ -205,9 +205,9 @@ const HistoryPage = () => {
                     ) : (
                         <div className="text-center">
                             <div className="text-6xl mb-2">
-                                {conversion.status === 'failed' ? '❌' : 
-                                 conversion.status === 'processing' ? '⏳' :
-                                 type === 'image' ? '🖼️' : '🎥'}
+                                {conversion.status === 'failed' ? '' : 
+                                 conversion.status === 'processing' ? '' :
+                                 type === 'image' ? <LuImages /> : <IoFilmOutline />}
                             </div>
                             <div className="text-sm font-medium text-gray-600">
                                 {conversion.status === 'failed' ? 'Upload Failed' :
