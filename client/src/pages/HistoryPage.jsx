@@ -8,6 +8,8 @@ import Navbar from '../components/Navbar';
 import SessionExpiredModal from '../components/SessionExpiredModal';
 import { ThumbnailWithSpinner } from '../components/ImageWithSpinner';
 import { preloadImages } from '../utils/cache';
+import { LuImages } from "react-icons/lu";
+import { IoFilmOutline } from "react-icons/io5";
 
 const HistoryPage = () => {
     const [history, setHistory] = useState({ images: [], videos: [] });
@@ -292,7 +294,7 @@ const HistoryPage = () => {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
+                <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Conversion History</h1>
                     <p className="text-gray-600">View your recent file conversions organized by type</p>
                 </div>
@@ -307,7 +309,7 @@ const HistoryPage = () => {
                 <div className="mb-12">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                            <span className="mr-2">🖼️</span>
+                            <span className="mr-2"><LuImages /></span>
                             Images
                             <span className="ml-2 text-sm font-normal text-gray-500">
                                 ({history.images.length})
@@ -327,11 +329,10 @@ const HistoryPage = () => {
                         </div>
                     ) : (
                         <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
-                            <div className="text-4xl mb-4">🖼️</div>
                             <p className="text-gray-600 mb-4">No image conversions yet</p>
                             <Link 
                                 to="/upload" 
-                                className="inline-block bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                                className="inline-block bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
                             >
                                 Convert Your First Image
                             </Link>
@@ -343,7 +344,7 @@ const HistoryPage = () => {
                 <div>
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                            <span className="mr-2">🎥</span>
+                            <span className="mr-2"><IoFilmOutline /></span>
                             Videos
                             <span className="ml-2 text-sm font-normal text-gray-500">
                                 ({history.videos.length})
@@ -363,11 +364,10 @@ const HistoryPage = () => {
                         </div>
                     ) : (
                         <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
-                            <div className="text-4xl mb-4">🎥</div>
                             <p className="text-gray-600 mb-4">No video conversions yet</p>
                             <Link 
                                 to="/upload" 
-                                className="inline-block bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                                className="inline-block bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
                             >
                                 Convert Your First Video
                             </Link>
