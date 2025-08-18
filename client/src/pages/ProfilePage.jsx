@@ -79,7 +79,7 @@ const ProfilePage = () => {
                         <p className="text-gray-600 mb-6">Please log in to view your profile.</p>
                         <Link
                             to="/login"
-                            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                            className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-black transition-colors"
                         >
                             Login
                         </Link>
@@ -107,7 +107,7 @@ const ProfilePage = () => {
                             
                             <div className="space-y-6">
                                 <div className="flex items-center space-x-4">
-                                    <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-xl font-bold">
+                                    <div className="w-16 h-16 bg-gray-600 text-white rounded-full flex items-center justify-center text-xl font-bold">
                                         {user.username.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
@@ -151,15 +151,15 @@ const ProfilePage = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Link
                                     to="/upload"
-                                    className="flex items-center justify-center px-4 py-3 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+                                    className="flex items-center justify-center px-4 py-3 border border-black text-black rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    📁 Upload Files
+                                    Upload Files
                                 </Link>
                                 <Link
                                     to="/history"
-                                    className="flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center justify-center px-4 py-3 border border-black text-black rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    📋 View History
+                                     View History
                                 </Link>
                             </div>
                         </div>
@@ -210,7 +210,7 @@ const ProfilePage = () => {
                                     <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                     </svg>
-                                    Bulk conversions
+                                    Bulk conversions (soon)
                                 </li>
                             </ul>
                         </div>
