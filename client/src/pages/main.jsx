@@ -47,8 +47,13 @@ const cleanupLocalStorage = () => {
 // Clean up localStorage before starting the app
 cleanupLocalStorage();
 
+// Use StrictMode only in development
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+  process.env.NODE_ENV === 'development' ? (
+    <StrictMode>
+      <App />
+    </StrictMode>
+  ) : (
     <App />
-  </StrictMode>
+  )
 )

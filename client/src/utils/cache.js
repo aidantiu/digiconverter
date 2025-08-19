@@ -3,6 +3,7 @@ class ImageCache {
     constructor(maxSize = 100) {
         this.cache = new Map();
         this.maxSize = maxSize;
+        this.pendingRequests = new Map(); // Track ongoing requests
     }
 
     get(url) {
@@ -20,6 +21,10 @@ class ImageCache {
         // Remove oldest item if cache is full
         if (this.cache.size >= this.maxSize) {
             const firstKey = this.cache.keys().next().value;
+            const oldValue = this.cache.get(firstKey);
+            if (oldValue && oldValue.startsWith('blob:')) {
+                URL.revokeObjectURL(oldValue);
+            }
             this.cache.delete(firstKey);
         }
         this.cache.set(url, data);
@@ -29,8 +34,32 @@ class ImageCache {
         return this.cache.has(url);
     }
 
+    hasPendingRequest(url) {
+        return this.pendingRequests.has(url);
+    }
+
+    setPendingRequest(url, promise) {
+        this.pendingRequests.set(url, promise);
+        return promise;
+    }
+
+    removePendingRequest(url) {
+        this.pendingRequests.delete(url);
+    }
+
+    getPendingRequest(url) {
+        return this.pendingRequests.get(url);
+    }
+
     clear() {
+        // Clean up blob URLs before clearing
+        for (const [url, blobUrl] of this.cache) {
+            if (blobUrl && blobUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(blobUrl);
+            }
+        }
         this.cache.clear();
+        this.pendingRequests.clear();
     }
 
     size() {
@@ -42,7 +71,7 @@ class ImageCache {
 const imageCache = new ImageCache(50); // Cache up to 50 images
 
 /**
- * Fetch an image with caching support
+ * Fetch an image with caching support and request deduplication
  * @param {string} url - Image URL to fetch
  * @returns {Promise<string>} - Promise resolving to blob URL
  */
@@ -54,23 +83,43 @@ export async function fetchImageWithCache(url) {
         return cached;
     }
 
+    // Check if there's already a pending request for this URL
+    const pendingRequest = imageCache.getPendingRequest(url);
+    if (pendingRequest) {
+        console.log(`⏳ Waiting for existing request: ${url}`);
+        return pendingRequest;
+    }
+
     try {
         console.log(`🌐 Fetching: ${url}`);
-        const response = await fetch(url);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        // Create and store the pending request
+        const requestPromise = fetch(url)
+            .then(async response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                // Store in cache
+                imageCache.set(url, blobUrl);
+                console.log(`💾 Cached: ${url}`);
+                
+                return blobUrl;
+            })
+            .finally(() => {
+                // Remove from pending requests
+                imageCache.removePendingRequest(url);
+            });
+
+        // Store the pending request
+        imageCache.setPendingRequest(url, requestPromise);
         
-        // Store in cache
-        imageCache.set(url, blobUrl);
-        console.log(`💾 Cached: ${url}`);
-        
-        return blobUrl;
+        return await requestPromise;
     } catch (error) {
+        imageCache.removePendingRequest(url);
         console.error(`❌ Failed to fetch image: ${url}`, error);
         throw error;
     }

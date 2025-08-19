@@ -1,60 +1,28 @@
 const { express } = require('../utils/dependencies');
-const multer = require('multer');
 const path = require('path');
 const { Conversion } = require('../model/models');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { checkUploadLimit } = require('../middleware/uploadLimit');
-const { convertFile } = require('../utils/conversionProcessor');
+const upload = require('../middleware/multer'); // Import the new Cloudinary-enabled multer
+const cloudinary = require('../config/cloudinary');
+const { convertFileFromCloudinary } = require('../utils/cloudinaryProcessor'); // Import new processor
 
 const router = express.Router();
-
-// Configure multer for memory storage (no file system storage)
-const storage = multer.memoryStorage();
-
-// Create the uploads with memory storage
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB limit
-    },
-
-    // File filter to allow only specific file types
-    fileFilter: (req, file, cb) => {
-        // Allow only JPEG, PNG, WEBP images and MP4, MOV, WEBM, MPG videos
-        const allowedExtensions = /\.(jpeg|jpg|png|webp|mp4|mov|webm|mpeg|mpg)$/i;
-        const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
-        
-        // MIME types for supported formats only
-        const allowedMimeTypes = [
-            // Image MIME types (only JPEG, PNG, WebP)
-            'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
-            // Video MIME types (only MP4, MOV, WEBM, MPG)
-            'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
-            // Additional common MIME types for MOV files
-            'application/octet-stream'
-        ];
-        
-        const mimetypeAllowed = allowedMimeTypes.includes(file.mimetype);
-        
-        // Allow if either extension is valid OR mimetype is valid (more lenient approach)
-        if (extname || mimetypeAllowed) {
-            console.log(`✅ File accepted: ${file.originalname} (${file.mimetype})`);
-            return cb(null, true);
-        } else {
-            console.log(`❌ File rejected: ${file.originalname} (${file.mimetype})`);
-            cb(new Error('Only supported image and video files are allowed. Supported image formats: JPEG, PNG, WebP. Supported video formats: MP4, MOV, WebM, MPG'));
-        }
-    }
-});
 
 // Upload and convert file 
 router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), async (req, res) => {
     
-    // This endpoint allows users to upload a file and specify the target format for conversion.
+    // This endpoint allows users to upload a file to Cloudinary and store metadata in DB
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
+
+        console.log('📤 File uploaded to Cloudinary:', {
+            url: req.file.path,
+            public_id: req.file.filename,
+            size: req.file.size
+        });
 
         // Check if target format is provided in the request body
         const { targetFormat } = req.body;
@@ -90,23 +58,24 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
                 message: 'Unsupported file type. Only supported images (JPEG, PNG, WebP) and videos (MP4, MOV, WebM, MPG) are allowed.' 
             });
         }
+
         const clientIP = req.ip || req.connection.remoteAddress;
 
-        // Create conversion record with file data
+        // Create conversion record with Cloudinary URLs
         const conversion = new Conversion({
             originalFileName: req.file.originalname,
-            // convertedFileName will be set after conversion completes
             originalFormat: originalFormat,
             targetFormat: targetFormat.toLowerCase(),
             fileSize: req.file.size,
-            originalFileData: req.file.buffer, // Store file data in database
+            originalFileUrl: req.file.path, // Cloudinary URL
+            originalCloudinaryId: req.file.filename, // Cloudinary public_id
             originalMimeType: req.file.mimetype,
             userId: req.user ? req.user._id : null,
             ipAddress: clientIP,
             status: 'processing'
         });
 
-        // Await for the conversion record to be saved
+        // Save the conversion record
         try {
             await conversion.save();
             console.log(`📝 Conversion record created: ${conversion._id}`);
@@ -118,8 +87,16 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
             });
         }
 
-        // Start conversion process with timeout
-        const conversionPromise = convertFile(req.file.buffer, req.file.originalname, req.file.mimetype, targetFormat, conversion._id);
+        // Start conversion process (now using Cloudinary URLs)
+        const conversionPromise = convertFileFromCloudinary(
+            conversion.originalFileUrl,
+            conversion.originalCloudinaryId,
+            req.file.originalname,
+            req.file.mimetype,
+            targetFormat,
+            conversion._id
+        );
+
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
                 reject(new Error('Conversion timeout after 10 minutes'));
@@ -135,20 +112,18 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
             })
             .catch(async (error) => {
                 console.error('❌ Conversion failed:', error.message);
-                console.error('Full error:', error);
                 conversion.status = 'failed';
                 await conversion.save();
                 console.log(`💾 Conversion record marked as failed in database: ${conversion._id}`);
             });
 
-        // Add upload info to the request for later use
         res.status(200).json({
-            message: 'File uploaded successfully, conversion in progress',
+            message: 'File uploaded successfully to Cloudinary, conversion in progress',
             conversionId: conversion._id,
+            originalFileUrl: req.file.path, // Return Cloudinary URL for immediate display
             uploadInfo: req.uploadInfo || { isAnonymous: false }
         });
         
-    // Handle any errors during the upload or conversion process
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ message: 'Server error during upload' });
@@ -185,14 +160,11 @@ router.get('/status/:conversionId', async (req, res) => {
     }
 });
 
-// Download converted file
+// Download converted file - Updated for Cloudinary
 router.get('/download/:conversionId', async (req, res) => {
-
-    // This endpoint allows users to download their converted file from database.
     try {
         console.log(`📥 Download request for conversion ID: ${req.params.conversionId}`);
 
-        // Find the conversion record by ID
         const conversion = await Conversion.findById(req.params.conversionId);
         if (!conversion) {
             console.log(`❌ Conversion not found: ${req.params.conversionId}`);
@@ -200,9 +172,7 @@ router.get('/download/:conversionId', async (req, res) => {
         }
 
         console.log(`📋 Conversion status: ${conversion.status}`);
-        console.log(`📋 Has convertedFileData: ${!!conversion.convertedFileData}`);
-        console.log(`📋 Has convertedFileName: ${!!conversion.convertedFileName}`);
-        console.log(`📋 ConvertedFileName: ${conversion.convertedFileName}`);
+        console.log(`📋 Has convertedFileUrl: ${!!conversion.convertedFileUrl}`);
 
         // Check if the conversion is completed
         if (conversion.status !== 'completed') {
@@ -210,9 +180,9 @@ router.get('/download/:conversionId', async (req, res) => {
             return res.status(400).json({ message: 'Conversion not completed yet' });
         }
 
-        // Check if converted file data exists
-        if (!conversion.convertedFileData || !conversion.convertedFileName) {
-            console.log(`❌ Converted file not ready - Data: ${!!conversion.convertedFileData}, FileName: ${!!conversion.convertedFileName}`);
+        // Check if converted file URL exists
+        if (!conversion.convertedFileUrl) {
+            console.log(`❌ Converted file not ready - URL: ${!!conversion.convertedFileUrl}`);
             return res.status(400).json({ message: 'Converted file not ready' });
         }
 
@@ -220,16 +190,10 @@ router.get('/download/:conversionId', async (req, res) => {
         conversion.downloadCount += 1;
         await conversion.save();
 
-        // Set headers for file download
-        const downloadFileName = `${path.parse(conversion.originalFileName).name}.${conversion.targetFormat}`;
-        res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
-        res.setHeader('Content-Type', conversion.convertedMimeType || 'application/octet-stream');
-        res.setHeader('Content-Length', conversion.convertedFileData.length);
-
-        console.log(`📤 Sending file: ${downloadFileName} (${conversion.convertedFileData.length} bytes)`);
-
-        // Send the file data
-        res.send(conversion.convertedFileData);
+        // Redirect to Cloudinary URL for download
+        console.log(`📤 Redirecting to Cloudinary URL: ${conversion.convertedFileUrl}`);
+        res.redirect(conversion.convertedFileUrl);
+        
     } catch (error) {
         console.error('Download error:', error);
         res.status(500).json({ message: 'Server error during download' });
@@ -400,7 +364,7 @@ router.delete('/cleanup', async (req, res) => {
     }
 });
 
-// Get thumbnail for images (serve from database)
+// Get thumbnail for images - Updated for Cloudinary
 router.get('/thumbnail/image/:conversionId', optionalAuth, async (req, res) => {
     try {
         console.log(`📸 Requesting image thumbnail for conversion: ${req.params.conversionId}`);
@@ -411,7 +375,7 @@ router.get('/thumbnail/image/:conversionId', optionalAuth, async (req, res) => {
             return res.status(404).json({ message: 'Conversion not found' });
         }
 
-        console.log(`📊 Conversion status: ${conversion.status}, has thumbnail: ${!!conversion.thumbnailData}`);
+        console.log(`📊 Conversion status: ${conversion.status}, has thumbnail URL: ${!!conversion.thumbnailUrl}`);
 
         // Check conversion status
         if (conversion.status === 'failed') {
@@ -424,33 +388,26 @@ router.get('/thumbnail/image/:conversionId', optionalAuth, async (req, res) => {
             return res.status(202).json({ message: 'Conversion still processing', status: 'processing' });
         }
 
-        if (conversion.status !== 'completed' || !conversion.thumbnailData) {
+        // For images, we can use the original file URL as thumbnail if no specific thumbnail exists
+        const thumbnailUrl = conversion.thumbnailUrl || conversion.originalFileUrl;
+        
+        if (conversion.status !== 'completed' || !thumbnailUrl) {
             console.log(`❌ Thumbnail not available for: ${req.params.conversionId}, status: ${conversion.status}`);
             return res.status(404).json({ message: 'Thumbnail not available' });
         }
 
-        console.log(`✅ Serving image thumbnail from database`);
+        console.log(`✅ Redirecting to Cloudinary thumbnail URL: ${thumbnailUrl}`);
         
-        // Set aggressive caching headers for thumbnails
-        res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); // 24 hours
-        res.setHeader('ETag', `"thumb-${conversion._id}-${conversion.updatedAt || Date.now()}"`);
+        // Redirect to Cloudinary thumbnail URL
+        res.redirect(thumbnailUrl);
         
-        // Set proper headers for image serving
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        res.setHeader('Content-Type', conversion.thumbnailMimeType || 'image/jpeg');
-        res.setHeader('Content-Length', conversion.thumbnailData.length);
-        
-        // Serve the thumbnail data
-        res.send(conversion.thumbnailData);
     } catch (error) {
         console.error('❌ Image thumbnail error:', error);
         res.status(500).json({ message: 'Server error serving thumbnail' });
     }
 });
 
-// Get thumbnail for videos (serve from database)
+// Get thumbnail for videos - Updated for Cloudinary
 router.get('/thumbnail/video/:conversionId', optionalAuth, async (req, res) => {
     try {
         console.log(`🎬 Requesting video thumbnail for conversion: ${req.params.conversionId}`);
@@ -461,29 +418,18 @@ router.get('/thumbnail/video/:conversionId', optionalAuth, async (req, res) => {
             return res.status(404).json({ message: 'Conversion not found' });
         }
 
-        console.log(`📊 Conversion status: ${conversion.status}, has thumbnail: ${!!conversion.thumbnailData}`);
+        console.log(`📊 Conversion status: ${conversion.status}, has thumbnail URL: ${!!conversion.thumbnailUrl}`);
 
-        // Check if conversion is complete and has thumbnail data
-        if (conversion.status !== 'completed' || !conversion.thumbnailData) {
+        // Check if conversion is complete and has thumbnail URL
+        if (conversion.status !== 'completed' || !conversion.thumbnailUrl) {
             console.log(`❌ Video thumbnail not available for: ${req.params.conversionId}, status: ${conversion.status}`);
             return res.status(404).json({ message: 'Video thumbnail not available' });
         }
 
-        console.log(`✅ Serving video thumbnail from database`);
+        console.log(`✅ Redirecting to Cloudinary video thumbnail URL: ${conversion.thumbnailUrl}`);
         
-        // Set aggressive caching headers for video thumbnails
-        res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); // 24 hours
-        res.setHeader('ETag', `"video-thumb-${conversion._id}-${conversion.updatedAt || Date.now()}"`);
-        
-        // Set proper headers for image serving
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        res.setHeader('Content-Type', conversion.thumbnailMimeType || 'image/jpeg');
-        res.setHeader('Content-Length', conversion.thumbnailData.length);
-
-        // Serve the thumbnail data
-        res.send(conversion.thumbnailData);
+        // Redirect to Cloudinary thumbnail URL
+        res.redirect(conversion.thumbnailUrl);
 
     } catch (error) {
         console.error('❌ Video thumbnail error:', error);

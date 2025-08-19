@@ -23,28 +23,40 @@ const conversionSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    // Store original file data in database
-    originalFileData: {
-        type: Buffer,
-        required: true
+    // Store Cloudinary URLs instead of Buffer data
+    originalFileUrl: {
+        type: String,
+        required: true // Cloudinary URL for original file
+    },
+    originalCloudinaryId: {
+        type: String,
+        required: true // Cloudinary public_id for original file
     },
     originalMimeType: {
         type: String,
         required: true
     },
-    // Store converted file data in database
-    convertedFileData: {
-        type: Buffer,
-        required: false
+    // Store converted file Cloudinary data
+    convertedFileUrl: {
+        type: String,
+        required: false // Cloudinary URL for converted file
+    },
+    convertedCloudinaryId: {
+        type: String,
+        required: false // Cloudinary public_id for converted file
     },
     convertedMimeType: {
         type: String,
         required: false
     },
-    // Store thumbnail data for videos/images
-    thumbnailData: {
-        type: Buffer,
-        required: false
+    // Store thumbnail Cloudinary data
+    thumbnailUrl: {
+        type: String,
+        required: false // Cloudinary URL for thumbnail
+    },
+    thumbnailCloudinaryId: {
+        type: String,
+        required: false // Cloudinary public_id for thumbnail
     },
     thumbnailMimeType: {
         type: String,
@@ -83,7 +95,6 @@ const conversionSchema = new mongoose.Schema({
 // Index for efficient queries
 conversionSchema.index({ ipAddress: 1, createdAt: -1 });
 conversionSchema.index({ userId: 1, createdAt: -1 });
-conversionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Create Conversion Model
 module.exports = mongoose.model('Conversion', conversionSchema);

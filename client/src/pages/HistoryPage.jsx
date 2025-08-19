@@ -7,7 +7,7 @@ import { MiniProgressBar } from '../components/ProgressBar';
 import Navbar from '../components/Navbar';
 import SessionExpiredModal from '../components/SessionExpiredModal';
 import { ThumbnailWithSpinner } from '../components/ImageWithSpinner';
-import { preloadImages } from '../utils/cache';
+import { preloadImages, fetchImageWithCache } from '../utils/cache';
 import { LuImages } from "react-icons/lu";
 import { IoFilmOutline } from "react-icons/io5";
 
@@ -16,6 +16,7 @@ const HistoryPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showSessionExpired, setShowSessionExpired] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false); // Add loading state
 
     useEffect(() => {
         fetchCategorizedHistory();
@@ -50,7 +51,15 @@ const HistoryPage = () => {
     }, []);
 
     const fetchCategorizedHistory = async () => {
+        // Prevent multiple simultaneous calls
+        if (isLoadingHistory) {
+            console.log('📋 Already loading history, skipping duplicate request');
+            return;
+        }
+
         try {
+            setIsLoadingHistory(true);
+            
             // Check if user appears to be logged in and validate if so
             if (authUtils.isLoggedIn()) {
                 const validation = await authUtils.validateForAction();
@@ -108,6 +117,7 @@ const HistoryPage = () => {
             setError(error.message);
         } finally {
             setLoading(false);
+            setIsLoadingHistory(false);
         }
     };
 
@@ -153,26 +163,20 @@ const HistoryPage = () => {
                         ? API_ENDPOINTS.thumbnailImage(conversion._id)
                         : API_ENDPOINTS.thumbnailVideo(conversion._id);
 
-                    const response = await fetch(apiUrl, {
-                        headers: {
-                            'Authorization': token ? `Bearer ${token}` : ''
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch thumbnail: ${response.status}`);
-                    }
-
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    setThumbnailUrl(url);
+                    // Use the improved cache that handles deduplication
+                    const blobUrl = await fetchImageWithCache(apiUrl);
+                    setThumbnailUrl(blobUrl);
                 } catch (error) {
                     console.warn('Thumbnail loading failed:', error);
                     setThumbnailError(true);
                 }
             };
 
-            fetchThumbnail();
+            // Add a small delay to prevent all thumbnails from loading simultaneously
+            const delay = Math.random() * 100; // Random delay 0-100ms
+            const timeoutId = setTimeout(fetchThumbnail, delay);
+            
+            return () => clearTimeout(timeoutId);
         }, [conversion._id, conversion.status, type, conversion.convertedFileName]);
 
         // Cleanup object URL when component unmounts or when thumbnailUrl changes
