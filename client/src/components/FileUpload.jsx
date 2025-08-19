@@ -122,13 +122,11 @@ const FileUpload = ({ onUploadLimits }) => {
         // Validate file
         const validation = validateFile(selectedFile);
         if (!validation.isValid) {
-            if (validation.type === 'unsupported-video') {
-                setUnsupportedFileInfo({ 
-                    fileName: selectedFile.name, 
-                    detectedType: 'video' 
-                });
-                setShowUnsupportedModal(true);
-            }
+            setUnsupportedFileInfo({ 
+                fileName: selectedFile.name, 
+                detectedType: validation.type 
+            });
+            setShowUnsupportedModal(true);
             return;
         }
 
@@ -158,19 +156,40 @@ const FileUpload = ({ onUploadLimits }) => {
             'video/mp4', 'video/quicktime', 'video/webm', 'video/mpeg'
         ];
 
+        const fileName = file.name.toLowerCase();
+        const fileExtension = fileName.split('.').pop();
+        
+        // Define supported extensions
+        const supportedImageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+        const supportedVideoExtensions = ['mp4', 'mov', 'webm', 'mpg', 'mpeg'];
+        
+        // Define unsupported but common extensions
+        const unsupportedImageExtensions = ['gif', 'bmp', 'tiff', 'tif', 'svg', 'ico', 'raw', 'cr2', 'nef', 'arw'];
+        const unsupportedVideoExtensions = ['avi', 'wmv', 'flv', 'mkv', 'm4v', '3gp', 'asf', 'divx', 'xvid', 'ogv'];
+
+        // Check if file type is in allowed MIME types
         if (allowedTypes.includes(file.type)) {
             return { isValid: true };
         }
 
-        // Check for unsupported video formats
-        const fileName = file.name.toLowerCase();
-        const fileExtension = fileName.split('.').pop();
-        const unsupportedVideoFormats = ['avi', 'wmv', 'flv', 'mkv', 'm4v', '3gp', 'asf'];
-        
-        if (unsupportedVideoFormats.includes(fileExtension) || file.type.startsWith('video/')) {
+        // Check by file extension for more comprehensive detection
+        if (supportedImageExtensions.includes(fileExtension) || supportedVideoExtensions.includes(fileExtension)) {
+            return { isValid: true };
+        }
+
+        // Detect unsupported image formats
+        if (unsupportedImageExtensions.includes(fileExtension) || 
+            (file.type.startsWith('image/') && !supportedImageExtensions.includes(fileExtension))) {
+            return { isValid: false, type: 'unsupported-image' };
+        }
+
+        // Detect unsupported video formats
+        if (unsupportedVideoExtensions.includes(fileExtension) || 
+            (file.type.startsWith('video/') && !supportedVideoExtensions.includes(fileExtension))) {
             return { isValid: false, type: 'unsupported-video' };
         }
-        
+
+        // If we can't determine the type, mark as unknown
         return { isValid: false, type: 'unknown' };
     };
 
