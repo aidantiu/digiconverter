@@ -268,7 +268,14 @@ const HistoryPage = () => {
                         <div className="flex items-center justify-between">
                             <span>Conversion:</span>
                             <span className="font-medium text-purple-600">
-                                {conversion.originalFormat.toUpperCase()} → {conversion.targetFormat.toUpperCase()}
+                                {(() => {
+                                    // Handle MP4 → MP4 display as MPG → MP4 (likely pre-converted MPG files)
+                                    if (conversion.originalFormat.toLowerCase() === 'mp4' && 
+                                        conversion.targetFormat.toLowerCase() === 'mp4') {
+                                        return 'MPG → MP4';
+                                    }
+                                    return `${conversion.originalFormat.toUpperCase()} → ${conversion.targetFormat.toUpperCase()}`;
+                                })()}
                             </span>
                         </div>
                         
