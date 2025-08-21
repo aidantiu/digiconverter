@@ -4,7 +4,8 @@ const FormatSelector = ({
     selectedFormat, 
     onFormatChange, 
     fileType, 
-    disabled = false 
+    disabled = false,
+    originalFormat // Add this prop to know the original file format
 }) => {
     const getAvailableFormats = () => {
         if (fileType === 'image') {
@@ -14,11 +15,25 @@ const FormatSelector = ({
                 { value: 'webp', label: 'WebP' }
             ];
         } else if (fileType === 'video') {
-            return [
+            // Base video formats that are always available
+            const baseFormats = [
                 { value: 'mp4', label: 'MP4' },
                 { value: 'webm', label: 'WebM' },
                 { value: 'mov', label: 'MOV' }
             ];
+            
+            // Only show MPG/MPEG options if the original file is MP4, MOV, or WebM
+            // (MPG files are auto-converted to MP4, so they won't have 'mpg' as originalFormat)
+            const canConvertToMpeg = ['mp4', 'mov', 'webm'].includes(originalFormat?.toLowerCase());
+            
+            if (canConvertToMpeg) {
+                baseFormats.push(
+                    { value: 'mpg', label: 'MPG' },
+                    { value: 'mpeg', label: 'MPEG' }
+                );
+            }
+            
+            return baseFormats;
         }
         return [];
     };

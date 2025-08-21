@@ -7,16 +7,41 @@ import { initializeCache } from '../utils/cacheManager'
 // Initialize cache system
 initializeCache();
 
-// Register service worker for caching
+// Service Worker management - Unregister existing SW to fix API issues
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-                console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-                console.log('SW registration failed: ', registrationError);
-            });
+    window.addEventListener('load', async () => {
+        try {
+            // First, unregister any existing service workers
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                console.log('Unregistering existing SW:', registration);
+                await registration.unregister();
+            }
+            
+            // Clear all caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                console.log('Cleared all SW caches');
+            }
+            
+            console.log('All Service Workers unregistered and caches cleared');
+            
+            // For now, don't register any new service worker to prevent API interference
+            // TODO: Re-enable SW later with proper API request handling
+            
+        } catch (error) {
+            console.error('SW cleanup failed:', error);
+        }
+    });
+    
+    // Listen for messages from the Service Worker (if any)
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data?.type === 'SW_UNREGISTERED') {
+            console.log('Service Worker has been unregistered');
+            // Optionally reload the page to ensure clean state
+            // window.location.reload();
+        }
     });
 }
 

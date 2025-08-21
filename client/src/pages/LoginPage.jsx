@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
 import { authUtils } from '../utils/auth';
 import Loader from '../components/Loader';
-import { FaCameraRetro } from "react-icons/fa";
+import { FaCameraRetro, FaEye, FaEyeSlash } from "react-icons/fa";
 import Navbar from '../components/Navbar';
 
 function LoginPage() {
@@ -14,6 +14,7 @@ function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -165,17 +166,30 @@ function LoginPage() {
                                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                                                 Password
                                             </label>
-                                            <input
-                                                id="password"
-                                                name="password"
-                                                type="password"
-                                                autoComplete="current-password"
-                                                required
-                                                value={formData.password}
-                                                onChange={handleChange}
-                                                className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black"
-                                                placeholder="Enter your password"
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    id="password"
+                                                    name="password"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    autoComplete="current-password"
+                                                    required
+                                                    value={formData.password}
+                                                    onChange={handleChange}
+                                                    className="mt-1 block w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black"
+                                                    placeholder="Enter your password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="absolute inset-y-0 right-0 flex items-center pr-3 mt-1"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {showPassword ? (
+                                                        <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                                    ) : (
+                                                        <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="my-6">

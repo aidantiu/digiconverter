@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
-import { FaCameraRetro } from "react-icons/fa";
+import { FaCameraRetro, FaEye, FaEyeSlash } from "react-icons/fa";
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({
@@ -13,6 +13,8 @@ const RegisterPage = () => {
     });
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -33,24 +35,38 @@ const RegisterPage = () => {
     const validateForm = () => {
         const newErrors = {};
 
+        // Username validation - match backend requirements
         if (!formData.username.trim()) {
             newErrors.username = 'Username is required';
-        } else if (formData.username.trim().length < 3) {
-            newErrors.username = 'Username must be at least 3 characters';
+        } else if (formData.username.trim().length < 2) {
+            newErrors.username = 'Username must be at least 2 characters';
+        } else if (formData.username.trim().length > 50) {
+            newErrors.username = 'Username must be less than 50 characters';
+        } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username.trim())) {
+            newErrors.username = 'Username can only contain letters, numbers, and underscores';
         }
 
+        // Email validation - match backend requirements
         if (!formData.email.trim()) {
             newErrors.email = 'Email is required';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
+        } else if (formData.email.length > 100) {
+            newErrors.email = 'Email must be less than 100 characters';
         }
 
+        // Strong password validation - match backend requirements
         if (!formData.password) {
             newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
+        } else if (formData.password.length < 8) {
+            newErrors.password = 'Password must be at least 8 characters';
+        } else if (formData.password.length > 128) {
+            newErrors.password = 'Password must be less than 128 characters';
+        } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/.test(formData.password)) {
+            newErrors.password = 'Password must contain uppercase, lowercase, number, and special character (@$!%*?&)';
         }
 
+        // Confirm password validation
         if (!formData.confirmPassword) {
             newErrors.confirmPassword = 'Please confirm your password';
         } else if (formData.password !== formData.confirmPassword) {
@@ -142,13 +158,80 @@ const RegisterPage = () => {
                                         {/* Password */}
                                         <div>
                                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                                            <input id="password" name="password" type="password" autoComplete="new-password" required value={formData.password} onChange={handleChange} className={`mt-1 block w-full px-4 py-3 border ${errors.password ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} placeholder="Enter your password" />
+                                            <div className="relative">
+                                                <input 
+                                                    id="password" 
+                                                    name="password" 
+                                                    type={showPassword ? "text" : "password"} 
+                                                    autoComplete="new-password" 
+                                                    required 
+                                                    value={formData.password} 
+                                                    onChange={handleChange} 
+                                                    className={`mt-1 block w-full px-4 py-3 pr-12 border ${errors.password ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} 
+                                                    placeholder="Enter your password" 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="absolute inset-y-0 right-0 flex items-center pr-3 mt-1"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {showPassword ? (
+                                                        <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                                    ) : (
+                                                        <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                                    )}
+                                                </button>
+                                            </div>
                                             {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+                                            {/* Password requirements indicator */}
+                                            <div className="mt-2 text-xs text-gray-500">
+                                                <p>Password must contain:</p>
+                                                <ul className="list-disc list-inside ml-2 space-y-1">
+                                                    <li className={formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                                                        At least 8 characters
+                                                    </li>
+                                                    <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                        One lowercase letter
+                                                    </li>
+                                                    <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                        One uppercase letter
+                                                    </li>
+                                                    <li className={/\d/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                        One number
+                                                    </li>
+                                                    <li className={/[@$!%*?&]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                        One special character (@$!%*?&)
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
                                         {/* Confirm Password */}
                                         <div>
                                             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
-                                            <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required value={formData.confirmPassword} onChange={handleChange} className={`mt-1 block w-full px-4 py-3 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} placeholder="Confirm your password" />
+                                            <div className="relative">
+                                                <input 
+                                                    id="confirmPassword" 
+                                                    name="confirmPassword" 
+                                                    type={showConfirmPassword ? "text" : "password"} 
+                                                    autoComplete="new-password" 
+                                                    required 
+                                                    value={formData.confirmPassword} 
+                                                    onChange={handleChange} 
+                                                    className={`mt-1 block w-full px-4 py-3 pr-12 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-xl shadow-sm focus:outline-none focus:ring-black focus:border-black`} 
+                                                    placeholder="Confirm your password" 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="absolute inset-y-0 right-0 flex items-center pr-3 mt-1"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                >
+                                                    {showConfirmPassword ? (
+                                                        <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                                    ) : (
+                                                        <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                                    )}
+                                                </button>
+                                            </div>
                                             {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
                                         </div>
                                     </div>

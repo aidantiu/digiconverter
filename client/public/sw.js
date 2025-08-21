@@ -1,96 +1,27 @@
-// Service Worker for caching thumbnails and API responses
-const CACHE_NAME = 'digiconverter-cache-v1';
-const THUMBNAIL_CACHE = 'thumbnails-v1';
+// Simple Service Worker - Does nothing to prevent API interference
+console.log('SW: Simple service worker loaded - no caching or request interference');
 
-// URLs to cache
-const urlsToCache = [
-    '/',
-    '/static/js/bundle.js',
-    '/static/css/main.css',
-];
-
-// Install event - cache essential files
+// Install immediately
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
-            })
-    );
+    console.log('SW: Installing simple SW');
+    self.skipWaiting();
 });
 
-// Fetch event - intercept network requests
-self.addEventListener('fetch', event => {
-    const { request } = event;
-    const url = new URL(request.url);
-    
-    // Cache thumbnails aggressively
-    if (url.pathname.includes('/thumbnail/')) {
-        event.respondWith(
-            caches.open(THUMBNAIL_CACHE).then(cache => {
-                return cache.match(request).then(response => {
-                    if (response) {
-                        console.log('Serving thumbnail from cache:', url.pathname);
-                        return response;
-                    }
-                    
-                    // Fetch and cache the thumbnail
-                    return fetch(request).then(fetchResponse => {
-                        // Check if we received a valid response
-                        if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
-                            return fetchResponse;
-                        }
-                        
-                        const responseToCache = fetchResponse.clone();
-                        cache.put(request, responseToCache);
-                        console.log('Cached thumbnail:', url.pathname);
-                        return fetchResponse;
-                    });
-                });
-            })
-        );
-        return;
-    }
-    
-    // For other requests, use network first strategy
-    event.respondWith(
-        fetch(request)
-            .then(response => {
-                // Check if we received a valid response
-                if (!response || response.status !== 200 || response.type !== 'basic') {
-                    return response;
-                }
-                
-                // Clone the response
-                const responseToCache = response.clone();
-                
-                caches.open(CACHE_NAME)
-                    .then(cache => {
-                        cache.put(request, responseToCache);
-                    });
-                
-                return response;
-            })
-            .catch(() => {
-                // If network fails, try to serve from cache
-                return caches.match(request);
-            })
-    );
-});
-
-// Activate event - clean up old caches
+// Activate and take control immediately
 self.addEventListener('activate', event => {
+    console.log('SW: Activating simple SW');
     event.waitUntil(
+        // Clear any existing caches
         caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME && cacheName !== THUMBNAIL_CACHE) {
-                        console.log('Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
+            return Promise.all(cacheNames.map(name => caches.delete(name)));
+        }).then(() => {
+            return self.clients.claim();
         })
     );
+});
+
+// Do not intercept any fetch requests - let everything pass through normally
+self.addEventListener('fetch', event => {
+    // Don't call event.respondWith() - let all requests pass through naturally
+    return;
 });

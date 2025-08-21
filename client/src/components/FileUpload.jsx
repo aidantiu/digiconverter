@@ -367,6 +367,7 @@ const FileUpload = ({ onUploadLimits }) => {
                             selectedFormat={targetFormat}
                             onFormatChange={setTargetFormat}
                             fileType={previewType}
+                            originalFormat={file ? file.name.split('.').pop() : null}
                             disabled={isUploading || isConverting}
                         />
 
