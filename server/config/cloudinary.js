@@ -7,7 +7,10 @@ cloudinary.config({
   // Get cloudinary credentials from environment variables
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  // Configure for large file uploads
+  chunk_size: 6000000, // 6MB chunks for uploading large files
+  timeout: 120000, // 2 minutes timeout for large uploads
 });
 
 // Log the configuration

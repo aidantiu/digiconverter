@@ -3,18 +3,86 @@ const path = require('path');
 const { Conversion } = require('../model/models');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { checkUploadLimit } = require('../middleware/uploadLimit');
-const upload = require('../middleware/multer'); // Import the new Cloudinary-enabled multer
+const { upload, handleUploadError } = require('../middleware/multer');
 const cloudinary = require('../config/cloudinary');
-const { convertFileFromCloudinary } = require('../utils/cloudinaryProcessor'); // Import new processor
+const { convertFileFromCloudinary, convertMpgToMp4AndUpload } = require('../utils/cloudinaryProcessor');
+const StorageOptimizer = require('../utils/storageOptimizer');
+const SecurityLogger = require('../utils/securityLogger');
+const { conversionValidation, validateInput, validateIP, sanitizeObjectId } = require('../middleware/validation');
 
 const router = express.Router();
 
-// Upload and convert file 
-router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), async (req, res) => {
+// Enhanced access control middleware - Fixed for authenticated users
+const verifyConversionAccess = async (req, res, next) => {
+    try {
+        const conversionId = sanitizeObjectId(req.params.conversionId);
+        if (!conversionId) {
+            SecurityLogger.logAccessDenied(`Invalid conversion ID: ${req.params.conversionId}`, 'Invalid ID format', req);
+            return res.status(400).json({ message: 'Invalid conversion ID' });
+        }
+
+        const conversion = await Conversion.findById(conversionId);
+        if (!conversion) {
+            SecurityLogger.logAccessDenied(`Conversion not found: ${conversionId}`, 'Resource not found', req);
+            return res.status(404).json({ message: 'Conversion not found' });
+        }
+
+        // Check ownership - Fixed logic
+        let hasAccess = false;
+        
+        if (conversion.userId) {
+            // If conversion has a userId, check if the current user matches
+            if (req.user && conversion.userId.equals(req.user._id)) {
+                hasAccess = true;
+                console.log(`✅ Access granted to user ${req.user._id} for conversion ${conversionId}`);
+            }
+        } else {
+            // If conversion has no userId (anonymous), check IP address
+            const clientIP = req.ip || req.connection.remoteAddress;
+            
+            if (!validateIP(clientIP)) {
+                SecurityLogger.logSuspiciousActivity(`Invalid client IP detected: ${clientIP}`, req);
+                return res.status(400).json({ message: 'Invalid client identification' });
+            }
+            
+            if (conversion.ipAddress === clientIP) {
+                hasAccess = true;
+                console.log(`✅ Access granted to IP ${clientIP} for conversion ${conversionId}`);
+            }
+        }
+            
+        if (!hasAccess) {
+            console.log(`❌ Access denied for conversion ${conversionId}:`);
+            console.log(`   - Conversion userId: ${conversion.userId}`);
+            console.log(`   - Request user: ${req.user?._id || 'none'}`);
+            console.log(`   - Conversion IP: ${conversion.ipAddress}`);
+            console.log(`   - Request IP: ${req.ip || req.connection.remoteAddress}`);
+            
+            SecurityLogger.logAccessDenied(`Conversion ${conversionId}`, 'Unauthorized access attempt', req);
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        req.conversion = conversion;
+        next();
+    } catch (error) {
+        SecurityLogger.logSuspiciousActivity(`Access verification error: ${error.message}`, req);
+        res.status(500).json({ message: 'Server error during access verification' });
+    }
+};
+
+// Upload and convert file with enhanced security
+router.post('/upload', optionalAuth, checkUploadLimit, (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            return handleUploadError(err, req, res, next);
+        }
+        next();
+    });
+}, conversionValidation.uploadParams, validateInput, async (req, res) => {
     
-    // This endpoint allows users to upload a file to Cloudinary and store metadata in DB
     try {
         if (!req.file) {
+            SecurityLogger.logSuspiciousActivity('Upload attempt without file', req);
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
@@ -24,66 +92,129 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
             size: req.file.size
         });
 
-        // Check if target format is provided in the request body
         const { targetFormat } = req.body;
-        if (!targetFormat) {
-            return res.status(400).json({ message: 'Target format is required' });
-        }
 
-        // Validate target format and file type compatibility
+        // Enhanced format validation
         const originalFormat = path.extname(req.file.originalname).slice(1).toLowerCase();
-        const imageFormats = ['jpeg', 'jpg', 'png', 'webp']; // Only supported image formats
-        const videoFormats = ['mp4', 'mov', 'webm', 'mpeg', 'mpg'];
+        const imageFormats = ['jpeg', 'jpg', 'png', 'webp'];
+        const videoFormats = ['mp4', 'mov', 'webm']; // Removed mpg/mpeg since they're converted to mp4
+        
+        // Debug logging for format detection
+        console.log(`🔍 Route Debug - Upload processing:`);
+        console.log(`   - Original filename: ${req.file.originalname}`);
+        console.log(`   - Detected original format: ${originalFormat}`);
+        console.log(`   - File MIME type: ${req.file.mimetype}`);
+        console.log(`   - Target format: ${targetFormat}`);
+        console.log(`   - Target format toLowerCase: ${targetFormat.toLowerCase()}`);
+        console.log(`   - Image formats: [${imageFormats.join(', ')}]`);
+        console.log(`   - Video formats: [${videoFormats.join(', ')}]`);
+        
+        // Check if this was originally an MPG file that got converted to MP4
+        const wasOriginallyMpg = req.file.originalname.includes('_converted') && 
+                                 req.file.mimetype === 'video/mp4' &&
+                                 req.file.originalname.toLowerCase().includes('.mp4');
+        
+        if (wasOriginallyMpg) {
+            console.log(`🎬 Detected pre-converted MPG→MP4 file: ${req.file.originalname}`);
+        }
         
         const isImageFile = imageFormats.includes(originalFormat);
-        const isVideoFile = videoFormats.includes(originalFormat);
+        const isVideoFile = videoFormats.includes(originalFormat) || wasOriginallyMpg;
         const targetIsImage = imageFormats.includes(targetFormat.toLowerCase());
         const targetIsVideo = videoFormats.includes(targetFormat.toLowerCase());
         
+        console.log(`   - Is image file: ${isImageFile}`);
+        console.log(`   - Is video file: ${isVideoFile}`);
+        console.log(`   - Was originally MPG: ${wasOriginallyMpg}`);
+        console.log(`   - Target is image: ${targetIsImage}`);
+        console.log(`   - Target is video: ${targetIsVideo}`);
+        
         // Validate format compatibility
         if (isImageFile && !targetIsImage) {
+            SecurityLogger.logSuspiciousActivity(`Invalid image conversion attempt: ${originalFormat} to ${targetFormat}`, req);
             return res.status(400).json({ 
                 message: 'Invalid conversion: Images can only be converted to supported image formats (JPEG, PNG, WebP)' 
             });
         }
         
         if (isVideoFile && !targetIsVideo) {
+            console.log(`❌ Video format validation failed:`);
+            console.log(`   - Original is video: ${isVideoFile}`);
+            console.log(`   - Target is video: ${targetIsVideo}`);
+            console.log(`   - Original format: ${originalFormat}`);
+            console.log(`   - Target format: ${targetFormat}`);
+            SecurityLogger.logSuspiciousActivity(`Invalid video conversion attempt: ${originalFormat} to ${targetFormat}`, req);
             return res.status(400).json({ 
-                message: 'Invalid conversion: Videos can only be converted to supported video formats (MP4, MOV, WebM, MPG)' 
+                message: `Invalid conversion: Videos can only be converted to supported video formats (MP4, MOV, WebM). You selected: ${targetFormat}` 
             });
         }
         
         if (!isImageFile && !isVideoFile) {
+            SecurityLogger.logSuspiciousActivity(`Unsupported file type upload: ${originalFormat}`, req);
             return res.status(400).json({ 
-                message: 'Unsupported file type. Only supported images (JPEG, PNG, WebP) and videos (MP4, MOV, WebM, MPG) are allowed.' 
+                message: 'Unsupported file type. Only supported images (JPEG, PNG, WebP) and videos (MP4, MOV, WebM) are allowed.' 
             });
         }
 
         const clientIP = req.ip || req.connection.remoteAddress;
 
-        // Create conversion record with Cloudinary URLs
+        // Create conversion record with enhanced security
+        // For pre-converted MPG files, store the original format info
+        const actualOriginalFormat = wasOriginallyMpg ? 'mpg' : originalFormat;
+        
         const conversion = new Conversion({
             originalFileName: req.file.originalname,
-            originalFormat: originalFormat,
+            originalFormat: actualOriginalFormat,
             targetFormat: targetFormat.toLowerCase(),
             fileSize: req.file.size,
-            originalFileUrl: req.file.path, // Cloudinary URL
-            originalCloudinaryId: req.file.filename, // Cloudinary public_id
+            originalFileUrl: req.file.path,
+            originalCloudinaryId: req.file.filename,
             originalMimeType: req.file.mimetype,
             userId: req.user ? req.user._id : null,
             ipAddress: clientIP,
             status: 'processing'
         });
 
-        // Save the conversion record
-        try {
+        await conversion.save();
+        console.log(`📝 Conversion record created: ${conversion._id}`);
+
+        SecurityLogger.logSecurityEvent('CONVERSION_STARTED', {
+            conversionId: conversion._id,
+            originalFormat: actualOriginalFormat,
+            targetFormat,
+            fileSize: req.file.size,
+            userId: req.user?._id || 'anonymous',
+            wasPreConverted: wasOriginallyMpg
+        }, req);
+
+        // If the file was already converted from MPG to MP4 and target is MP4, mark as completed
+        if (wasOriginallyMpg && targetFormat.toLowerCase() === 'mp4') {
+            console.log(`✅ MPG→MP4 conversion already completed during upload`);
+            conversion.status = 'completed';
+            conversion.convertedFileUrl = req.file.path;
+            conversion.convertedCloudinaryId = req.file.filename;
+            conversion.convertedFileName = req.file.originalname;
+            conversion.convertedMimeType = 'video/mp4';
+            conversion.progress = 100;
+            
+            // Generate thumbnail URL using Cloudinary transformation
+            conversion.thumbnailUrl = cloudinary.url(req.file.filename, {
+                resource_type: 'video',
+                format: 'jpg',
+                width: 300,
+                height: 300,
+                crop: 'fill',
+                start_offset: '0s'
+            });
+            
             await conversion.save();
-            console.log(`📝 Conversion record created: ${conversion._id}`);
-        } catch (saveError) {
-            console.error('❌ Error saving conversion record:', saveError);
-            return res.status(500).json({ 
-                message: 'Failed to create conversion record',
-                error: saveError.message 
+            
+            return res.status(200).json({
+                message: 'MPG file converted to MP4 and uploaded successfully',
+                conversionId: conversion._id,
+                originalFileUrl: req.file.path,
+                status: 'completed',
+                uploadInfo: req.uploadInfo || { isAnonymous: false }
             });
         }
 
@@ -125,24 +256,117 @@ router.post('/upload', optionalAuth, checkUploadLimit, upload.single('file'), as
         });
         
     } catch (error) {
+        SecurityLogger.logSuspiciousActivity(`Upload error: ${error.message}`, req);
         console.error('Upload error:', error);
         res.status(500).json({ message: 'Server error during upload' });
     }
 });
 
-// Check conversion status
-router.get('/status/:conversionId', async (req, res) => {
-
-    // This endpoint allows users to check the status of their file conversion.
-    try {
-
-        // Find the conversion record by ID
-        const conversion = await Conversion.findById(req.params.conversionId);
-        if (!conversion) {
-            return res.status(404).json({ message: 'Conversion not found' });
+// New route for MPG/MPEG to MP4 conversion with direct Cloudinary upload
+router.post('/upload-mpg', optionalAuth, checkUploadLimit, (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            return handleUploadError(err, req, res, next);
         }
+        next();
+    });
+}, async (req, res) => {
+    
+    try {
+        if (!req.file) {
+            SecurityLogger.logSuspiciousActivity('MPG upload attempt without file', req);
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const originalFormat = path.extname(req.file.originalname).slice(1).toLowerCase();
         
-        // Return the conversion status and details
+        // Validate that the uploaded file is MPG or MPEG
+        if (!['mpg', 'mpeg'].includes(originalFormat)) {
+            SecurityLogger.logSuspiciousActivity(`Invalid file format for MPG upload: ${originalFormat}`, req);
+            return res.status(400).json({ 
+                message: 'Only MPG and MPEG files are allowed for this endpoint' 
+            });
+        }
+
+        console.log('🎬 MPG/MPEG file uploaded to Cloudinary:', {
+            url: req.file.path,
+            public_id: req.file.filename,
+            size: req.file.size,
+            originalFormat: originalFormat
+        });
+
+        const clientIP = req.ip || req.connection.remoteAddress;
+
+        // Create conversion record
+        const conversion = new Conversion({
+            originalFileName: req.file.originalname,
+            originalFormat: originalFormat,
+            targetFormat: 'mp4',
+            fileSize: req.file.size,
+            originalFileUrl: req.file.path,
+            originalCloudinaryId: req.file.filename,
+            originalMimeType: req.file.mimetype,
+            userId: req.user ? req.user._id : null,
+            ipAddress: clientIP,
+            status: 'processing'
+        });
+
+        await conversion.save();
+        console.log(`📝 MPG conversion record created: ${conversion._id}`);
+
+        SecurityLogger.logSecurityEvent('MPG_CONVERSION_STARTED', {
+            conversionId: conversion._id,
+            originalFormat,
+            targetFormat: 'mp4',
+            fileSize: req.file.size,
+            userId: req.user?._id || 'anonymous'
+        }, req);
+
+        // Start the conversion process
+        convertMpgToMp4AndUpload(
+            req.file.path,
+            req.file.filename,
+            req.file.originalname,
+            req.file.mimetype,
+            conversion._id
+        ).then(async (result) => {
+            console.log(`✅ MPG to MP4 conversion completed: ${result.cloudinaryUrl}`);
+            conversion.status = 'completed';
+            conversion.convertedFileUrl = result.cloudinaryUrl;
+            conversion.convertedCloudinaryId = result.cloudinaryId;
+            conversion.convertedFileName = result.fileName;
+            conversion.convertedMimeType = 'video/mp4';
+            conversion.thumbnailUrl = result.thumbnailUrl;
+            conversion.progress = 100;
+            await conversion.save();
+        }).catch(async (error) => {
+            console.error('❌ MPG to MP4 conversion failed:', error.message);
+            conversion.status = 'failed';
+            conversion.progress = 0;
+            await conversion.save();
+        });
+
+        res.status(200).json({
+            message: 'MPG/MPEG file uploaded successfully, converting to MP4 and uploading to Cloudinary',
+            conversionId: conversion._id,
+            originalFileUrl: req.file.path,
+            uploadInfo: req.uploadInfo || { isAnonymous: false }
+        });
+        
+    } catch (error) {
+        SecurityLogger.logSuspiciousActivity(`MPG upload error: ${error.message}`, req);
+        console.error('MPG upload error:', error);
+        res.status(500).json({ message: 'Server error during MPG upload' });
+    }
+});
+
+// Check conversion status with validation - Fixed authentication
+router.get('/status/:conversionId', optionalAuth, conversionValidation.statusParams, validateInput, verifyConversionAccess, async (req, res) => {
+    try {
+        const conversion = req.conversion;
+        
+        console.log(`✅ Status check successful for conversion ${conversion._id}`);
+        
         res.status(200).json({
             id: conversion._id,
             status: conversion.status,
@@ -153,70 +377,68 @@ router.get('/status/:conversionId', async (req, res) => {
             createdAt: conversion.createdAt
         });
 
-    // Handle any errors during the status check
     } catch (error) {
+        SecurityLogger.logSuspiciousActivity(`Status check error: ${error.message}`, req);
         console.error('Status check error:', error);
         res.status(500).json({ message: 'Server error checking status' });
     }
 });
 
-// Download converted file - Updated for Cloudinary
-router.get('/download/:conversionId', async (req, res) => {
+// Download converted file with enhanced security
+router.get('/download/:conversionId', optionalAuth, conversionValidation.downloadParams, validateInput, verifyConversionAccess, async (req, res) => {
     try {
-        console.log(`📥 Download request for conversion ID: ${req.params.conversionId}`);
+        const conversion = req.conversion;
 
-        const conversion = await Conversion.findById(req.params.conversionId);
-        if (!conversion) {
-            console.log(`❌ Conversion not found: ${req.params.conversionId}`);
-            return res.status(404).json({ message: 'Conversion not found' });
-        }
+        console.log(`📥 Download request for conversion ID: ${conversion._id}`);
 
-        console.log(`📋 Conversion status: ${conversion.status}`);
-        console.log(`📋 Has convertedFileUrl: ${!!conversion.convertedFileUrl}`);
-
-        // Check if the conversion is completed
         if (conversion.status !== 'completed') {
-            console.log(`❌ Conversion not completed yet, status: ${conversion.status}`);
+            SecurityLogger.logAccessDenied(`Conversion ${conversion._id}`, 'Download attempt on incomplete conversion', req);
             return res.status(400).json({ message: 'Conversion not completed yet' });
         }
 
-        // Check if converted file URL exists
         if (!conversion.convertedFileUrl) {
-            console.log(`❌ Converted file not ready - URL: ${!!conversion.convertedFileUrl}`);
+            SecurityLogger.logAccessDenied(`Conversion ${conversion._id}`, 'Download attempt without converted file', req);
             return res.status(400).json({ message: 'Converted file not ready' });
         }
 
-        // Increment download count
+        // Increment download count and log download
         conversion.downloadCount += 1;
         await conversion.save();
 
-        // Redirect to Cloudinary URL for download
+        SecurityLogger.logSecurityEvent('FILE_DOWNLOAD', {
+            conversionId: conversion._id,
+            fileName: conversion.convertedFileName,
+            downloadCount: conversion.downloadCount
+        }, req);
+
         console.log(`📤 Redirecting to Cloudinary URL: ${conversion.convertedFileUrl}`);
         res.redirect(conversion.convertedFileUrl);
         
     } catch (error) {
+        SecurityLogger.logSuspiciousActivity(`Download error: ${error.message}`, req);
         console.error('Download error:', error);
         res.status(500).json({ message: 'Server error during download' });
     }
 });
 
-// Get user's conversion history
+// Get user's conversion history with IP validation
 router.get('/history', optionalAuth, async (req, res) => {
-
-    // This endpoint retrieves the user's conversion history.
     try {
         let query = {};
         
-        // If user is authenticated, filter by user ID
         if (req.user) {
             query.userId = req.user._id;
         } else {
-            // For anonymous users, show their IP-based history
             const clientIP = req.ip || req.connection.remoteAddress;
+            
+            if (!validateIP(clientIP)) {
+                SecurityLogger.logSuspiciousActivity(`Invalid IP in history request: ${clientIP}`, req);
+                return res.status(400).json({ message: 'Invalid client identification' });
+            }
+            
             query = { ipAddress: clientIP, userId: null };
         }
 
-        // Find conversions based on the query limiting to the last 20 records
         const conversions = await Conversion.find(query)
             .sort({ createdAt: -1 })
             .limit(20)
@@ -224,6 +446,7 @@ router.get('/history', optionalAuth, async (req, res) => {
 
         res.status(200).json({ conversions });
     } catch (error) {
+        SecurityLogger.logSuspiciousActivity(`History error: ${error.message}`, req);
         console.error('History error:', error);
         res.status(500).json({ message: 'Server error retrieving history' });
     }
@@ -234,12 +457,10 @@ router.get('/history/categorized', optionalAuth, async (req, res) => {
     try {
         let query = {};
         
-        // If user is authenticated, filter by user ID
         if (req.user) {
             query.userId = req.user._id;
             console.log(`📋 Fetching categorized history for user: ${req.user._id}`);
         } else {
-            // For anonymous users, show their IP-based history
             const clientIP = req.ip || req.connection.remoteAddress;
             query = { ipAddress: clientIP, userId: null };
             console.log(`📋 Fetching categorized history for anonymous IP: ${clientIP}`);
@@ -494,6 +715,68 @@ router.get('/stats', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Statistics error:', error);
         res.status(500).json({ message: 'Server error retrieving statistics' });
+    }
+});
+
+// Storage optimization endpoints
+router.post('/storage/optimize', optionalAuth, async (req, res) => {
+    try {
+        const clientIP = req.ip || req.connection.remoteAddress;
+        const userId = req.user ? req.user._id : null;
+        
+        console.log(`🧹 Storage optimization requested for ${userId ? 'user' : 'IP'}: ${userId || clientIP}`);
+        
+        const deletedCount = await StorageOptimizer.optimizeUserStorage(userId, clientIP, 5);
+        
+        res.status(200).json({
+            message: 'Storage optimization completed',
+            deletedConversions: deletedCount,
+            keptConversions: 5
+        });
+        
+    } catch (error) {
+        console.error('Storage optimization error:', error);
+        res.status(500).json({ message: 'Server error during storage optimization' });
+    }
+});
+
+// Get storage usage statistics
+router.get('/storage/stats', optionalAuth, async (req, res) => {
+    try {
+        const clientIP = req.ip || req.connection.remoteAddress;
+        const userId = req.user ? req.user._id : null;
+        
+        const stats = await StorageOptimizer.getStorageStats(userId, clientIP);
+        
+        res.status(200).json({
+            storage: stats,
+            message: 'Storage statistics retrieved successfully'
+        });
+        
+    } catch (error) {
+        console.error('Storage stats error:', error);
+        res.status(500).json({ message: 'Server error retrieving storage statistics' });
+    }
+});
+
+// Manual cleanup of expired conversions (admin endpoint)
+router.post('/storage/cleanup-expired', async (req, res) => {
+    try {
+        const { hoursOld = 24 } = req.body;
+        
+        console.log(`🧹 Manual cleanup of conversions older than ${hoursOld} hours`);
+        
+        const deletedCount = await StorageOptimizer.cleanupExpiredConversions(hoursOld);
+        
+        res.status(200).json({
+            message: 'Expired conversions cleanup completed',
+            deletedConversions: deletedCount,
+            hoursOld: hoursOld
+        });
+        
+    } catch (error) {
+        console.error('Expired cleanup error:', error);
+        res.status(500).json({ message: 'Server error during expired conversions cleanup' });
     }
 });
 

@@ -42,6 +42,33 @@ if (customFfmpegPath && fs.existsSync(customFfmpegPath)) {
 async function processVideoConversion(fileBuffer, originalName, mimeType, targetFormat, conversionId) {
     console.log(`🎥 Converting video: ${originalName} -> ${targetFormat}`);
     
+    // Map file extensions to FFmpeg format names (only supported formats) - MOVED OUTSIDE TRY BLOCK
+    const formatMapping = {
+        'mp4': 'mp4',
+        'mov': 'mov',
+        'webm': 'webm',
+        'mpeg': 'mpeg',
+        'mpg': 'mpeg'  // MPG files use MPEG format in FFmpeg
+    };
+
+    // Debug logging to see exactly what we're checking
+    console.log(`🔍 Debug - Target format received: "${targetFormat}"`);
+    console.log(`🔍 Debug - Target format toLowerCase(): "${targetFormat.toLowerCase()}"`);
+    console.log(`🔍 Debug - Format mapping keys:`, Object.keys(formatMapping));
+    console.log(`🔍 Debug - Format exists in mapping:`, !!formatMapping[targetFormat.toLowerCase()]);
+
+    // Validate target format is supported - Fixed validation logic
+    const normalizedFormat = targetFormat.toLowerCase();
+    if (!formatMapping[normalizedFormat]) {
+        console.log(`❌ Unsupported format: ${targetFormat} (normalized: ${normalizedFormat})`);
+        console.log(`❌ Available formats:`, Object.keys(formatMapping).join(', '));
+        throw new Error(`Unsupported video format: ${targetFormat}. Supported formats: ${Object.keys(formatMapping).join(', ').toUpperCase()}`);
+    }
+
+    // Get the proper FFmpeg format name
+    const ffmpegFormat = formatMapping[normalizedFormat];
+    console.log(`✅ Using FFmpeg format: ${ffmpegFormat} for target: ${targetFormat}`);
+    
     // Create temporary directory for FFmpeg processing
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
@@ -64,23 +91,6 @@ async function processVideoConversion(fileBuffer, originalName, mimeType, target
         } catch (updateError) {
             console.warn('Could not update initial progress:', updateError.message);
         }
-
-    // Map file extensions to FFmpeg format names (only supported formats)
-    const formatMapping = {
-        'mp4': 'mp4',
-        'mov': 'mov',
-        'webm': 'webm',
-        'mpeg': 'mpeg',
-        'mpg': 'mpeg'  // MPG files use MPEG format in FFmpeg
-    };
-
-    // Validate target format is supported
-    if (!formatMapping[targetFormat.toLowerCase()]) {
-        throw new Error(`Unsupported video format: ${targetFormat}. Supported formats: MP4, MOV, WEBM, MPG`);
-    }
-
-    // Get the proper FFmpeg format name
-    const ffmpegFormat = formatMapping[targetFormat.toLowerCase()];
 
     return new Promise((resolve, reject) => {
         // Handle video conversion with FFmpeg
