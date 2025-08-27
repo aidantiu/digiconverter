@@ -183,27 +183,29 @@ const RegisterPage = () => {
                                                 </button>
                                             </div>
                                             {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
-                                            {/* Password requirements indicator */}
-                                            <div className="mt-2 text-xs text-gray-500">
-                                                <p>Password must contain:</p>
-                                                <ul className="list-disc list-inside ml-2 space-y-1">
-                                                    <li className={formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
-                                                        At least 8 characters
-                                                    </li>
-                                                    <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
-                                                        One lowercase letter
-                                                    </li>
-                                                    <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
-                                                        One uppercase letter
-                                                    </li>
-                                                    <li className={/\d/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
-                                                        One number
-                                                    </li>
-                                                    <li className={/[@$!%*?&]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
-                                                        One special character (@$!%*?&)
-                                                    </li>
-                                                </ul>
-                                            </div>
+                                            {/* Password requirements indicator - only show when password field has content */}
+                                            {formData.password && (
+                                                <div className="mt-2 text-xs text-gray-500">
+                                                    <p>Password must contain:</p>
+                                                    <ul className="list-disc list-inside ml-2 space-y-1">
+                                                        <li className={formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                                                            At least 8 characters
+                                                        </li>
+                                                        <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                            One lowercase letter
+                                                        </li>
+                                                        <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                            One uppercase letter
+                                                        </li>
+                                                        <li className={/\d/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                            One number
+                                                        </li>
+                                                        <li className={/[@$!%*?&]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}>
+                                                            One special character (@$!%*?&)
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            )}
                                         </div>
                                         {/* Confirm Password */}
                                         <div>
