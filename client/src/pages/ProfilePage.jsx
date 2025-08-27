@@ -138,7 +138,7 @@ const ProfilePage = () => {
                                             <dt className="text-sm font-medium text-gray-500">Member Since</dt>
                                             <dd className="mt-1 text-sm text-gray-900">
                                                 {new Date(user.createdAt || Date.now()).toLocaleDateString()}
-                                            </dd>s
+                                            </dd>
                                         </div>
                                     </dl>
                                 </div>
