@@ -6,17 +6,6 @@ const { Conversion } = require('./model/models');
  * Scheduled cleanup jobs for storage optimization
  */
 
-// Run cleanup every hour to remove expired conversions (older than 24 hours)
-cron.schedule('0 * * * *', async () => {
-    try {
-        console.log('🕐 Running hourly cleanup job...');
-        const deletedCount = await StorageOptimizer.cleanupExpiredConversions(24);
-        console.log(`✅ Hourly cleanup completed: ${deletedCount} expired conversions removed`);
-    } catch (error) {
-        console.error('❌ Hourly cleanup job failed:', error);
-    }
-});
-
 // Run user storage optimization every 6 hours
 cron.schedule('0 */6 * * *', async () => {
     try {
@@ -98,6 +87,5 @@ cron.schedule('0 2 * * *', async () => {
 });
 
 console.log('📅 Storage cleanup jobs scheduled:');
-console.log('   - Hourly: Remove conversions older than 24 hours');
 console.log('   - Every 6 hours: Optimize user storage (keep only 5 most recent)');
 console.log('   - Daily at 2 AM: Clean up failed conversions older than 1 hour');
