@@ -70,26 +70,42 @@ class StorageOptimizer {
                 });
             }
             
-            // Delete from Cloudinary
+            // Thumbnail (if stored separately in Cloudinary)
+            if (conversion.thumbnailCloudinaryId && conversion.thumbnailCloudinaryId !== conversion.originalCloudinaryId) {
+                filesToDelete.push({
+                    public_id: conversion.thumbnailCloudinaryId,
+                    resource_type: 'image'
+                });
+            }
+            
+            // Delete from Cloudinary with retry logic
             let deletedCount = 0;
             for (const file of filesToDelete) {
                 try {
-                    await cloudinary.uploader.destroy(file.public_id, { 
-                        resource_type: file.resource_type 
+                    const result = await cloudinary.uploader.destroy(file.public_id, { 
+                        resource_type: file.resource_type,
+                        invalidate: true // Invalidate CDN cache
                     });
-                    deletedCount++;
-                    console.log(`🗑️ Deleted Cloudinary file: ${file.public_id}`);
+                    
+                    if (result.result === 'ok' || result.result === 'not found') {
+                        deletedCount++;
+                        console.log(`🗑️ Deleted Cloudinary file: ${file.public_id} (${result.result})`);
+                    } else {
+                        console.warn(`⚠️ Unexpected result deleting ${file.public_id}:`, result);
+                    }
                 } catch (deleteError) {
                     console.warn(`⚠️ Could not delete ${file.public_id}:`, deleteError.message);
+                    // Continue with other files even if one fails
                 }
             }
             
-            // Mark as cleaned up
+            // Mark as cleaned up regardless of success (to prevent infinite retries)
             await Conversion.updateOne(
                 { _id: conversionId },
                 { cloudinaryCleanedUp: true }
             );
             
+            console.log(`✅ Cleaned up conversion ${conversionId}: ${deletedCount}/${filesToDelete.length} files deleted from Cloudinary`);
             return deletedCount;
             
         } catch (error) {
