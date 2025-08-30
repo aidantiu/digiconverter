@@ -43,11 +43,24 @@ cron.schedule('0 */6 * * *', async () => {
                 const userIdentifier = userGroup._id.userId || `IP:${userGroup._id.ipAddress}`;
                 console.log(`🧹 [DEBUG] Optimizing storage for ${userIdentifier} (${userGroup.count} total conversions)`);
                 
-                const deletedCount = await StorageOptimizer.optimizeUserStorage(
-                    userGroup._id.userId,
-                    userGroup._id.ipAddress,
-                    5 // Keep only 5 most recent
-                );
+                // Fix: Pass only userId OR ipAddress, not both
+                let deletedCount;
+                if (userGroup._id.userId) {
+                    // Registered user - use userId only
+                    deletedCount = await StorageOptimizer.optimizeUserStorage(
+                        userGroup._id.userId,
+                        null,
+                        5 // Keep only 5 most recent
+                    );
+                } else {
+                    // Anonymous user - use ipAddress only
+                    deletedCount = await StorageOptimizer.optimizeUserStorage(
+                        null,
+                        userGroup._id.ipAddress,
+                        5 // Keep only 5 most recent
+                    );
+                }
+                
                 totalOptimized += deletedCount;
                 
                 if (deletedCount > 0) {

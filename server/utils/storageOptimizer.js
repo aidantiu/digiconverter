@@ -169,10 +169,10 @@ class StorageOptimizer {
     }
     
     /**
-     * Optimize storage for a specific user (keep only N most recent)
+     * Optimize storage for a specific user (keep only N most recent per file type)
      * @param {string} userId - User ID
      * @param {string} ipAddress - IP address  
-     * @param {number} keepCount - Number of conversions to keep (default: 5)
+     * @param {number} keepCount - Number of conversions to keep per file type (default: 5)
      */
     static async optimizeUserStorage(userId = null, ipAddress = null, keepCount = 5) {
         try {
@@ -188,15 +188,52 @@ class StorageOptimizer {
             // Get all conversions sorted by creation date (newest first)
             const allConversions = await Conversion.find(query)
                 .sort({ createdAt: -1 })
-                .select('_id originalCloudinaryId convertedCloudinaryId cloudinaryCleanedUp fileSize');
+                .select('_id originalCloudinaryId convertedCloudinaryId cloudinaryCleanedUp fileSize originalMimeType createdAt');
             
-            if (allConversions.length <= keepCount) {
-                console.log(`✅ No cleanup needed. User has ${allConversions.length} conversions (limit: ${keepCount})`);
+            // Separate conversions by file type
+            const imageConversions = allConversions.filter(conv => 
+                conv.originalMimeType?.startsWith('image/')
+            );
+            const videoConversions = allConversions.filter(conv => 
+                conv.originalMimeType?.startsWith('video/')
+            );
+            const otherConversions = allConversions.filter(conv => 
+                !conv.originalMimeType?.startsWith('image/') && 
+                !conv.originalMimeType?.startsWith('video/')
+            );
+            
+            console.log(`📊 User has ${imageConversions.length} image conversions, ${videoConversions.length} video conversions, ${otherConversions.length} other conversions`);
+            
+            // Determine which conversions to delete
+            const conversionsToDelete = [];
+            
+            // Keep only the most recent N image conversions
+            if (imageConversions.length > keepCount) {
+                const imageToDelete = imageConversions.slice(keepCount);
+                conversionsToDelete.push(...imageToDelete);
+                console.log(`🖼️ Will delete ${imageToDelete.length} old image conversions (keeping ${keepCount} most recent)`);
+            }
+            
+            // Keep only the most recent N video conversions
+            if (videoConversions.length > keepCount) {
+                const videoToDelete = videoConversions.slice(keepCount);
+                conversionsToDelete.push(...videoToDelete);
+                console.log(`🎥 Will delete ${videoToDelete.length} old video conversions (keeping ${keepCount} most recent)`);
+            }
+            
+            // Keep only the most recent N other conversions
+            if (otherConversions.length > keepCount) {
+                const otherToDelete = otherConversions.slice(keepCount);
+                conversionsToDelete.push(...otherToDelete);
+                console.log(`📄 Will delete ${otherToDelete.length} old other conversions (keeping ${keepCount} most recent)`);
+            }
+            
+            if (conversionsToDelete.length === 0) {
+                console.log(`✅ No cleanup needed. User has ≤${keepCount} conversions per file type`);
                 return 0;
             }
             
-            const conversionsToDelete = allConversions.slice(keepCount);
-            console.log(`🧹 Optimizing storage: removing ${conversionsToDelete.length} old conversions`);
+            console.log(`🧹 Optimizing storage: removing ${conversionsToDelete.length} old conversions total`);
             
             let totalSizeFreed = 0;
             
