@@ -1,0 +1,4 @@
+# This is a placeholder for the docker-compose configuration for the client service.
+# You can define your services, networks, and volumes here.
+
+services:

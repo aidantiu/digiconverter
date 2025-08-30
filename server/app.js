@@ -150,13 +150,33 @@ app.use('/api/conversions/upload', uploadLimiter);
 app.use('/api/conversions', conversionRoutes);
 app.use('/api/upload', express.static('uploads')); // Serve static files from 'uploads' directory
 
-// Health check endpoint for debugging
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
+    res.status(200).json({
+        status: 'healthy',
+        service: 'DigiConverter Backend',
         timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        environment: process.env.NODE_ENV || 'development',
         origin: req.headers.origin,
         userAgent: req.headers['user-agent']
+    });
+});
+
+// Root endpoint for basic API info
+app.get('/', (req, res) => {
+    res.json({
+        service: 'DigiConverter API',
+        version: '1.0.0',
+        status: 'running',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        endpoints: {
+            health: '/api/health',
+            auth: '/api/auth/*',
+            conversions: '/api/conversions/*'
+        }
     });
 });
 
