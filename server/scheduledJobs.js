@@ -80,8 +80,8 @@ cron.schedule('0 */6 * * *', async () => {
     }
 });
 
-// Run failed conversions cleanup every minute (DEBUG MODE)
-cron.schedule('* * * * *', async () => {
+// Run failed conversions cleanup every 6 hours
+cron.schedule('0 */6 * * *', async () => {
     try {
         console.log('🌙 [DEBUG] Running failed conversions cleanup...');
         
@@ -114,14 +114,12 @@ cron.schedule('* * * * *', async () => {
             createdAt: { $lt: oneHourAgo }
         });
         
-        console.log(`✅ [DEBUG] Failed conversions cleanup completed: ${deleteResult.deletedCount} records removed, ${deletedCount} file sets deleted`);
+        console.log(`✅  Failed conversions cleanup completed: ${deleteResult.deletedCount} records removed, ${deletedCount} file sets deleted`);
         
     } catch (error) {
-        console.error('❌ [DEBUG] Failed conversions cleanup failed:', error);
+        console.error('❌ Failed conversions cleanup failed:', error);
     }
 });
 
-console.log('📅 [DEBUG MODE] Storage cleanup jobs scheduled:');
 console.log('   - Every minute: Optimize user storage (keep only 5 most recent)');
-console.log('   - Every minute: Clean up failed conversions older than 1 hour');
-console.log('   - 🚨 DEBUG MODE ACTIVE - Remember to change back to production schedule!');
+console.log('   - Every minute: Clean up failed conversions older than 1 hour')
