@@ -9,7 +9,7 @@ const { Conversion } = require('./model/models');
 // Run user storage optimization every 6 hours
 cron.schedule('0 */6 * * *', async () => {
     try {
-        console.log('🕕 [DEBUG] Running user storage optimization job...');
+        console.log('🕕 Running user storage optimization job...');
         
         // Get all users/IPs that have more than 5 conversions
         const pipeline = [
@@ -30,10 +30,10 @@ cron.schedule('0 */6 * * *', async () => {
         ];
         
         const usersToOptimize = await Conversion.aggregate(pipeline);
-        console.log(`📊 [DEBUG] Found ${usersToOptimize.length} users/IPs with more than 5 conversions`);
+        console.log(`📊 Found ${usersToOptimize.length} users/IPs with more than 5 conversions`);
         
         if (usersToOptimize.length === 0) {
-            console.log('✅ [DEBUG] No users need storage optimization');
+            console.log('✅ No users need storage optimization');
             return;
         }
         
@@ -41,7 +41,7 @@ cron.schedule('0 */6 * * *', async () => {
         for (const userGroup of usersToOptimize) {
             try {
                 const userIdentifier = userGroup._id.userId || `IP:${userGroup._id.ipAddress}`;
-                console.log(`🧹 [DEBUG] Optimizing storage for ${userIdentifier} (${userGroup.count} total conversions)`);
+                console.log(`🧹 Optimizing storage for ${userIdentifier} (${userGroup.count} total conversions)`);
                 
                 // Fix: Pass only userId OR ipAddress, not both
                 let deletedCount;
@@ -50,40 +50,40 @@ cron.schedule('0 */6 * * *', async () => {
                     deletedCount = await StorageOptimizer.optimizeUserStorage(
                         userGroup._id.userId,
                         null,
-                        5 // Keep only 5 most recent
+                        5 // Keep only 5 most recent per file type
                     );
                 } else {
                     // Anonymous user - use ipAddress only
                     deletedCount = await StorageOptimizer.optimizeUserStorage(
                         null,
                         userGroup._id.ipAddress,
-                        5 // Keep only 5 most recent
+                        5 // Keep only 5 most recent per file type
                     );
                 }
                 
                 totalOptimized += deletedCount;
                 
                 if (deletedCount > 0) {
-                    console.log(`✅ [DEBUG] Cleaned up ${deletedCount} old conversions for ${userIdentifier}`);
+                    console.log(`✅ Cleaned up ${deletedCount} old conversions for ${userIdentifier}`);
                 } else {
-                    console.log(`ℹ️ [DEBUG] No cleanup needed for ${userIdentifier}`);
+                    console.log(`ℹ️ No cleanup needed for ${userIdentifier}`);
                 }
             } catch (error) {
-                console.error('❌ [DEBUG] Failed to optimize storage for user:', userGroup._id, error);
+                console.error('❌ Failed to optimize storage for user:', userGroup._id, error);
             }
         }
         
-        console.log(`✅ [DEBUG] Storage optimization completed: ${totalOptimized} old conversions removed for ${usersToOptimize.length} users (keeping 5 most recent per user)`);
+        console.log(`✅ Storage optimization completed: ${totalOptimized} old conversions removed for ${usersToOptimize.length} users (keeping 5 most recent per file type)`);
         
     } catch (error) {
-        console.error('❌ [DEBUG] Storage optimization job failed:', error);
+        console.error('❌ Storage optimization job failed:', error);
     }
 });
 
 // Run failed conversions cleanup every 6 hours
 cron.schedule('0 */6 * * *', async () => {
     try {
-        console.log('🌙 [DEBUG] Running failed conversions cleanup...');
+        console.log('🌙 Running failed conversions cleanup...');
         
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         const failedConversions = await Conversion.find({
@@ -91,10 +91,10 @@ cron.schedule('0 */6 * * *', async () => {
             createdAt: { $lt: oneHourAgo }
         });
         
-        console.log(`📊 [DEBUG] Found ${failedConversions.length} failed conversions older than 1 hour`);
+        console.log(`📊 Found ${failedConversions.length} failed conversions older than 1 hour`);
         
         if (failedConversions.length === 0) {
-            console.log('✅ [DEBUG] No failed conversions to clean up');
+            console.log('✅ No failed conversions to clean up');
             return;
         }
         
@@ -104,7 +104,7 @@ cron.schedule('0 */6 * * *', async () => {
                 await StorageOptimizer.deleteConversionFiles(conversion._id);
                 deletedCount++;
             } catch (error) {
-                console.error('❌ [DEBUG] Failed to delete files for failed conversion:', conversion._id, error);
+                console.error('❌ Failed to delete files for failed conversion:', conversion._id, error);
             }
         }
         
@@ -114,12 +114,13 @@ cron.schedule('0 */6 * * *', async () => {
             createdAt: { $lt: oneHourAgo }
         });
         
-        console.log(`✅  Failed conversions cleanup completed: ${deleteResult.deletedCount} records removed, ${deletedCount} file sets deleted`);
+        console.log(`✅ Failed conversions cleanup completed: ${deleteResult.deletedCount} records removed, ${deletedCount} file sets deleted`);
         
     } catch (error) {
         console.error('❌ Failed conversions cleanup failed:', error);
     }
 });
 
-console.log('   - Every minute: Optimize user storage (keep only 5 most recent)');
-console.log('   - Every minute: Clean up failed conversions older than 1 hour')
+console.log('📅 Scheduled Jobs:');
+console.log('   - Every 6 hours: Optimize user storage (keep 5 most recent per file type)');
+console.log('   - Every 6 hours: Clean up failed conversions older than 1 hour');
