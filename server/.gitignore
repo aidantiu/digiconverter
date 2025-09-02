@@ -3,6 +3,7 @@ node_modules
 
 # Ignore environment variables file
 .env
+.env.production 
 
 # Playground files
 playground-1.mongodb.js

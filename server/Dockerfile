@@ -10,36 +10,34 @@ RUN apk add --no-cache \
     git \
     bash
 
-# Create app directory
+# Create non-root user early
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+# Create app directory with proper ownership from start
 WORKDIR /app
+RUN chown nodejs:nodejs /app
+
+# Switch to non-root user early
+USER nodejs
 
 # Copy package files for dependency installation
-COPY package*.json ./
+COPY --chown=nodejs:nodejs package*.json ./
 
 # Development stage
 FROM base AS development
 
-# Install all dependencies with better timeout handling
-RUN --mount=type=cache,target=/root/.npm \
-    npm config set fetch-timeout 300000 && \
+# Install all dependencies with better timeout handling and clean cache
+RUN npm config set fetch-timeout 300000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
-    npm ci --prefer-offline --no-audit
+    npm ci --prefer-offline --no-audit && \
+    npm cache clean --force
 
-# Create necessary directories with proper permissions BEFORE creating user
+# Create necessary directories with proper permissions
 RUN mkdir -p temp processed uploads logs && \
     chmod 755 temp processed uploads logs
 
-# Create non-root user for development
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 -G nodejs
-
-# Change ownership of directories to nodejs user
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
-# Copy source code (will be volume mounted in dev)
+# Copy source code with proper ownership
 COPY --chown=nodejs:nodejs . .
 
 # Expose development port
@@ -55,11 +53,11 @@ CMD ["npm", "run", "dev"]
 # Production dependencies stage
 FROM base AS prod-deps
 
-# Install only production dependencies with better timeout handling
-RUN --mount=type=cache,target=/root/.npm \
-    npm config set fetch-timeout 300000 && \
+# Install only production dependencies with better timeout handling and clean cache
+RUN npm config set fetch-timeout 300000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
-    npm ci --only=production --prefer-offline --no-audit && npm cache clean --force
+    npm ci --only=production --prefer-offline --no-audit && \
+    npm cache clean --force
 
 # Production stage
 FROM node:20-alpine AS production
@@ -70,31 +68,29 @@ RUN apk add --no-cache \
     curl \
     dumb-init
 
-# Create app directory
-WORKDIR /app
-
 # Create non-root user for production
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-
-# Copy application code
-COPY --chown=nodejs:nodejs . .
-
-# Create necessary directories with proper permissions
-RUN mkdir -p temp processed uploads logs && \
-    chown -R nodejs:nodejs /app && \
-    chmod 755 temp processed uploads logs
+# Create app directory with proper ownership
+WORKDIR /app
+RUN chown nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
 
+# Copy production dependencies with proper ownership
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copy application code with proper ownership
+COPY --chown=nodejs:nodejs . .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p temp processed uploads logs && \
+    chmod 755 temp processed uploads logs
+
 # Expose production port
 EXPOSE 5000
-
-# Production health check
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
