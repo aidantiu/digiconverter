@@ -1,6 +1,5 @@
 # DigiConverter - Centralized Docker Management
 # Supports both development and production builds with incremental tagging
-# Uses MongoDB Atlas for database (no local MongoDB container)
 
 # Docker Compose Files
 COMPOSE_DEV := docker-compose.dev.yml
@@ -15,7 +14,6 @@ DOCKER_COMPOSE := docker compose
 # Default target
 help:
 	@echo "DigiConverter Docker Management"
-	@echo "🗄️  Database: MongoDB Atlas (cloud)"
 	@echo ""
 	@echo "Development Commands:"
 	@echo "  up-dev            Start all services in development mode (Docker Compose)"
@@ -46,7 +44,7 @@ up-dev:
 	@echo "✅ Development environment started:"
 	@echo "   🌐 Frontend: http://localhost:5173"
 	@echo "   🔗 Backend: http://localhost:5000"
-	@echo "   🗄️  Database: MongoDB Atlas (configured in .env)"
+	@echo "   🗄️  Database: localhost:27017"
 
 up-prod:
 	@echo "🚀 Starting DigiConverter production environment..."
@@ -58,7 +56,6 @@ up-prod:
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_PROD) up -d
 	@echo "✅ Production environment started:"
 	@echo "   🌐 Application: http://localhost"
-	@echo "   🗄️  Database: MongoDB Atlas"
 	@echo "   🔍 Check status: make status"
 
 up-staging:
@@ -68,13 +65,12 @@ up-staging:
 		echo "NODE_ENV=staging" > server/.env.staging; \
 		echo "JWT_SECRET=$$(openssl rand -base64 32)" >> server/.env.staging; \
 		echo "PORT=5000" >> server/.env.staging; \
-		echo "📝 Created basic .env.staging file. Please add your MongoDB Atlas credentials."; \
+		echo "📝 Created basic .env.staging file. Please add your credentials."; \
 	fi
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_STAGING) up -d
 	@echo "✅ Staging environment started:"
 	@echo "   🌐 Frontend: http://localhost:3000"
 	@echo "   🔗 Backend: http://localhost:5000"
-	@echo "   🗄️  Database: MongoDB Atlas"
 
 down-dev:
 	@echo "🛑 Stopping development environment..."
