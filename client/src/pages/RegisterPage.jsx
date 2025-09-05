@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
 import { FaCameraRetro, FaEye, FaEyeSlash } from "react-icons/fa";
+import { API_ENDPOINTS } from '../config/api';
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({
@@ -86,7 +87,7 @@ const RegisterPage = () => {
 
         setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:5000/api/auth/register', {
+            const response = await fetch(API_ENDPOINTS.register, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

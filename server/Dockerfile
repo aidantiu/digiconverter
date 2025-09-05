@@ -25,22 +25,20 @@ RUN --mount=type=cache,target=/root/.npm \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm ci --prefer-offline --no-audit
 
-# Create necessary directories with proper permissions BEFORE creating user
-RUN mkdir -p temp processed uploads logs && \
-    chmod 755 temp processed uploads logs
-
 # Create non-root user for development
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs
 
-# Change ownership of directories to nodejs user
-RUN chown -R nodejs:nodejs /app
+# Create necessary directories with proper permissions
+RUN mkdir -p temp processed uploads logs && \
+    chown nodejs:nodejs temp processed uploads logs && \
+    chmod 755 temp processed uploads logs
+
+# Copy source code with proper ownership
+COPY --chown=nodejs:nodejs . .
 
 # Switch to non-root user
 USER nodejs
-
-# Copy source code (will be volume mounted in dev)
-COPY --chown=nodejs:nodejs . .
 
 # Expose development port
 EXPOSE 5000
@@ -70,37 +68,40 @@ RUN apk add --no-cache \
     curl \
     dumb-init
 
-# Create app directory
-WORKDIR /app
-
-# Create non-root user for production
+# Create non-root user first
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
+# Create app directory and set ownership
+RUN mkdir -p /app && chown nodejs:nodejs /app
 
-# Copy application code
-COPY --chown=nodejs:nodejs . .
+# Switch to app directory
+WORKDIR /app
 
-# Create necessary directories with proper permissions
-RUN mkdir -p temp processed uploads logs && \
-    chown -R nodejs:nodejs /app && \
-    chmod 755 temp processed uploads logs
-
-# Switch to non-root user
+# Switch to non-root user early to avoid ownership issues
 USER nodejs
+
+# Create necessary directories as the nodejs user
+RUN mkdir -p temp processed uploads logs
+
+# Copy production dependencies with proper ownership
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copy application code with proper ownership (including .env files)
+COPY --chown=nodejs:nodejs . .
 
 # Expose production port
 EXPOSE 5000
 
 # Production health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:5000/api/health || exit 1
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Production command
-CMD ["npm", "start"]
+# Production command - explicitly load .env.production if it exists
+CMD ["sh", "-c", "if [ -f .env.production ]; then export $(cat .env.production | grep -v '^#' | xargs); fi && npm start"]
 
 
 

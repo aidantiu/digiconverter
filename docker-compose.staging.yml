@@ -1,4 +1,18 @@
 services:
+  mongo:
+    image: mongo:6
+    container_name: digiconverter-mongo-staging
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-staging123}
+    volumes:
+      - mongo_data_staging:/data/db
+    networks:
+      - digiconverter-network
+    restart: unless-stopped
+
   backend:
     build:
       context: ./server
@@ -7,8 +21,18 @@ services:
     container_name: digiconverter-server-staging
     ports:
       - "5000:5000"
+    environment:
+      NODE_ENV: staging
+      PORT: 5000
+      MONGO_URI: ${MONGO_URI:-mongodb://admin:staging123@mongo:27017/digiconverter?authSource=admin}
+      JWT_SECRET: ${JWT_SECRET:-staging-jwt-secret}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     env_file:
-      - ./server/.env
+      - ./server/.env.staging
+    depends_on:
+      - mongo
     volumes:
       - ./server/logs:/app/logs
     networks:
@@ -31,6 +55,10 @@ services:
     networks:
       - digiconverter-network
     restart: unless-stopped
+
+volumes:
+  mongo_data_staging:
+    driver: local
 
 networks:
   digiconverter-network:
