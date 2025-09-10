@@ -13,8 +13,11 @@ This project uses **GitHub Actions** to run a simple CI/CD pipeline.
 The workflow file is in:  
 .github/workflows/ci-cd.yml
 
-ANSWER FOR THE QUESTION 2.
-2. What does the following command do? (5 pts)
+ANSWER FOR THE QUESTIONS.
+1. Write a bash script to monitor disk usage and send an alert if it exceeds 80%. (10 pts)
+ [checkdiskusage.sh](https://github.com/aidantiu/digiconverter/blob/main/checkdiskusage.sh)
+
+3. What does the following command do? (5 pts)
 chmod +x script.sh
 
 - The command `chmod +x script.sh` makes the file `script.sh` executable so it can be run directly with `./script.sh`.
