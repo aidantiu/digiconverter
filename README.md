@@ -1,6 +1,6 @@
 # CI/CD Pipeline
 
-This project uses **GitHub Actions** to run a simple CI/CD pipeline.  
+This project uses **GitHub Actions** to run a simple Node.js CI/CD pipeline.  
 
 ## What it does
 1. Runs when code is pushed or a pull request is made to the `main` branch.  
@@ -11,7 +11,7 @@ This project uses **GitHub Actions** to run a simple CI/CD pipeline.
 
 ## File Location
 The workflow file is in:  
-.github/workflows/ci-cd.yml
+[node.js.yml](https://github.com/aidantiu/digiconverter/blob/main/.github/workflows/node.js.yml)
 
 ANSWER FOR THE QUESTIONS.
 1. Write a bash script to monitor disk usage and send an alert if it exceeds 80%. (10 pts)
