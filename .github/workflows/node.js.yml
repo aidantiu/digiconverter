@@ -1,5 +1,5 @@
 # This workflow will install dependencies, run tests, and perform a mock deployment.
-name: Node.js CI/CD
+name:  CI/CD
 
 # Controls when the workflow will run
 on:
@@ -13,6 +13,11 @@ jobs:
 
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+
+    # Set default working directory to "server"
+    defaults:
+      run:
+        working-directory: ./server   
 
     strategy:
       matrix:
@@ -29,9 +34,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'   
+          cache: 'npm'  
+          cache-dependency-path: ./server/package-lock.json 
 
-      # Installs dependencies
+      # Installs dependencies using lock file
       - name: Install dependencies
         run: npm ci
 
@@ -45,5 +51,5 @@ jobs:
 
       # Mock deployment step
       - name: Deploy (Mock Step)
-        if: github.ref == 'refs/heads/main'   
-        run: echo "Deploying..."
+        if: github.ref == 'refs/heads/main' 
+        run: echo "Deploying. . ."
